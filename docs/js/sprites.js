@@ -1,10 +1,9 @@
-// sprites.js — all pixel art drawn procedurally. No image files needed.
-// MAJOR UPDATE: many more outfit options (hats, shades, patterns), plus cash sprite,
-// plus all the boss/enemy hurt-flash support.
+// sprites.js — procedural pixel art
+// v4: 2x rapper redesign with shirtless option, tattoos, visible chain, jeans
+// New sprites: ArmedCrab gun, Fan, SuitDude, BloodSplat decal, Sonic wave
 
 const Sprites = (() => {
 
-  // Helper: draw a pixel-art "sprite" from a 2D color grid
   function drawGrid(ctx, x, y, grid, palette, pixelSize = 2) {
     for (let row = 0; row < grid.length; row++) {
       const line = grid[row];
@@ -23,7 +22,6 @@ const Sprites = (() => {
     }
   }
 
-  // ============ COLOR UTILITIES ============
   function hexToRgb(hex) {
     if (!hex || typeof hex !== 'string') return { r: 200, g: 0, b: 0 };
     const m = hex.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
@@ -39,230 +37,205 @@ const Sprites = (() => {
     return `rgb(${Math.min(255, Math.floor(c.r + (255 - c.r) * factor))}, ${Math.min(255, Math.floor(c.g + (255 - c.g) * factor))}, ${Math.min(255, Math.floor(c.b + (255 - c.b) * factor))})`;
   }
 
-  // ============ PLAYER 2X ============
-  // Customizable: fit color, accent, hat, chain, shades, pattern
+  // ============ PLAYER 2X — RAPPER DRIP REDESIGN ============
+  // Options:
+  //   fit, accent — colors (fit = main outfit color)
+  //   hat — durag/cap/hood/beanie/bandana/headphones/mohawk/none
+  //   chain — gold/ice/platinum/cuban/none
+  //   shades — bool
+  //   pattern — solid/stripe/flame/glow
+  //   shirtless — bool (NEW: no shirt, exposed chest with tattoos and chain)
+  //   tattoos — bool (visible tats on arms/chest)
+  //   jeansColor — '#222' default, supports custom
   function drawPlayer(ctx, x, y, opts = {}, dir = 0, frame = 0) {
-    const fit    = opts.fit    || '#00ff66';
-    const accent = opts.accent || '#cc0022';
-    const hat    = opts.hat    || 'durag';
-    const chain  = opts.chain  || 'gold';
-    const shades = !!opts.shades;
-    const pattern = opts.pattern || 'solid';
-    const skin   = '#5a3a22';
-    const skinD  = '#3d2615';
-    const eye    = '#fff';
+    const fit      = opts.fit || '#00ff66';
+    const accent   = opts.accent || '#cc0022';
+    const hat      = opts.hat || 'durag';
+    const chain    = opts.chain || 'gold';
+    const shades   = !!opts.shades;
+    const pattern  = opts.pattern || 'solid';
+    const shirtless = opts.shirtless === true;
+    const tattoos  = opts.tattoos !== false; // default on
+    const jeansColor = opts.jeansColor || '#2a2a55';
+    const skin     = '#7a5236';
+    const skinD    = '#5a3a20';
+    const skinL    = '#9a7050';
+    const eye      = '#fff';
+    const tatColor = '#1a1a1a';
 
-    // Pattern variants tweak the fit accent
-    let fitB = fit;
+    // Pattern: glow outer ring
     if (pattern === 'glow') {
-      // Add an outer glow ring before sprite renders
-      ctx.fillStyle = `rgba(${hexToRgb(fit).r}, ${hexToRgb(fit).g}, ${hexToRgb(fit).b}, 0.18)`;
-      ctx.beginPath(); ctx.arc(x, y + 2, 22, 0, Math.PI * 2); ctx.fill();
-    } else if (pattern === 'stripe') {
-      // accented stripe is just brighter color
-      fitB = lightenHex(fit, 0.2);
-    } else if (pattern === 'flame') {
-      // Flame pattern: yellow→orange→fit-color gradient on the body
+      ctx.fillStyle = `rgba(${hexToRgb(fit).r}, ${hexToRgb(fit).g}, ${hexToRgb(fit).b}, 0.22)`;
+      ctx.beginPath(); ctx.arc(x, y + 2, 24, 0, Math.PI * 2); ctx.fill();
     }
 
-    // Hat character/color
-    let hatColor = '#000';
-    let hatGrid = null;
-    if (hat === 'durag') { hatColor = accent; }
-    else if (hat === 'cap') { hatColor = fit; }
-    else if (hat === 'hood') { hatColor = '#222'; }
-    else if (hat === 'beanie') { hatColor = accent; }
-    else if (hat === 'bandana') { hatColor = accent; }
-    else if (hat === 'headphones') { hatColor = '#222'; }
-    else if (hat === 'mohawk') { hatColor = accent; }
+    // Hat color
+    let hatColor;
+    switch (hat) {
+      case 'cap': hatColor = fit; break;
+      case 'hood': hatColor = '#222'; break;
+      case 'beanie': hatColor = accent; break;
+      case 'bandana': hatColor = accent; break;
+      case 'headphones': hatColor = '#222'; break;
+      case 'mohawk': hatColor = accent; break;
+      case 'none': hatColor = null; break;
+      case 'durag':
+      default: hatColor = accent; break;
+    }
 
     const chainColor = chain === 'gold' ? '#ffcc00'
                      : chain === 'ice' ? '#aaeeff'
                      : chain === 'platinum' ? '#cccccc'
+                     : chain === 'cuban' ? '#ffaa00'
                      : null;
 
-    // Base body grid (head + torso + legs)
-    // Head/face rows 0-5, torso rows 6-11, legs/shoes rows 12-17.
-    // Hat rows 0-2 (varies by hat type), body uses fit color F & accent A, chain C
-    let topRows;
-    let shadeRows;
+    // Eye row depending on shades
+    const eyeRow = shades ? '  HSGGGGGGSH  ' : '  HSEESSEESH  ';
 
-    // Build face rows depending on shades
-    if (shades) {
-      topRows = [
-        '  HSSSSSSSSH  ',
-        '  HSGGGGGGSH  ', // shades band
-        '  HSGGGGGGSH  ',
-      ];
-    } else {
-      topRows = [
-        '  HSSSSSSSSH  ',
-        '  HSEESSEESH  ', // eyes
-        '  HSSSSSSSSH  ',
-      ];
+    // Hat rows
+    let hatRows;
+    switch (hat) {
+      case 'cap':       hatRows = ['   HHHHHHHH   ', '  HHHHHHHHHH  ', '  HHHHHHHHH   ']; break;
+      case 'hood':      hatRows = ['  HHHHHHHHHH  ', ' HHHHHHHHHHHH ', ' HHHHHHHHHHHH ']; break;
+      case 'beanie':    hatRows = ['    HHHHHH    ', '   HHHHHHHH   ', '  HHHHHHHHHH  ']; break;
+      case 'bandana':   hatRows = ['              ', '              ', '  HHHHHHHHHH  ']; break;
+      case 'headphones':hatRows = ['   HHHHHHHH   ', '  H        H  ', '  H        H  ']; break;
+      case 'mohawk':    hatRows = ['      HH      ', '     HHHH     ', '    HHHHHH    ']; break;
+      case 'none':      hatRows = ['              ', '              ', '              ']; break;
+      case 'durag':
+      default:          hatRows = ['   HHHHHHHH   ', '  HHHHHHHHHH  ', '  HHHHHHHHHH  ']; break;
     }
-    shadeRows = [
-      '  HSSSSMSSSH  ', // mouth dot
+
+    // Face rows (3 total)
+    const faceRows = [
+      '  HSSSSSSSSH  ',
+      eyeRow,
+      '  HSSSSSSSSH  ',
+    ];
+    const lowerFaceRows = [
+      '  HSSSSMSSSH  ',
       '  HSSSSSSSSH  ',
     ];
 
-    // Hat rows (3 rows above head)
-    let hatRows;
-    switch (hat) {
-      case 'cap':
-        hatRows = [
-          '   HHHHHHHH   ',
-          '  HHHHHHHHHH  ',
-          '  HHHHHHHHH   ',
-        ];
-        break;
-      case 'hood':
-        hatRows = [
-          '  HHHHHHHHHH  ',
-          ' HHHHHHHHHHHH ',
-          ' HHHHHHHHHHHH ',
-        ];
-        // Hood extends down sides — add side flaps later
-        break;
-      case 'beanie':
-        hatRows = [
-          '    HHHHHH    ',
-          '   HHHHHHHH   ',
-          '  HHHHHHHHHH  ',
-        ];
-        break;
-      case 'bandana':
-        hatRows = [
-          '              ',
-          '              ',
-          '  HHHHHHHHHH  ',
-        ];
-        break;
-      case 'headphones':
-        hatRows = [
-          '   HHHHHHHH   ',
-          '  H        H  ',
-          '  H        H  ',
-        ];
-        break;
-      case 'mohawk':
-        hatRows = [
-          '      HH      ',
-          '     HHHH     ',
-          '    HHHHHH    ',
-        ];
-        break;
-      case 'none':
-        hatRows = [
-          '              ',
-          '              ',
-          '              ',
-        ];
-        break;
-      case 'durag':
-      default:
-        hatRows = [
-          '   HHHHHHHH   ',
-          '  HHHHHHHHHH  ',
-          '  HHHHHHHHHH  ', // durag trailing flap covers more
-        ];
-        break;
+    // === TORSO ===
+    // Shirtless variant: bare chest with abs/pec lines + tattoos + chain prominent
+    // Shirted: T-shirt with pattern + chain over shirt
+    let torsoRows;
+    if (shirtless) {
+      // Bare chest — skin tone with subtle muscle highlight/shadow + chain
+      torsoRows = [
+        '   SSSSSSSS   ',
+        '  SLSSSSLSSL  ', // pec highlights
+        '  SSSCCCCSSS  ', // chain
+        '  SSSSSSSSSS  ',
+        '  SLDSSSSDSL  ', // ab line
+        '  SSSSSSSSSS  ',
+      ];
+      // Add tattoo "T" markers on arms via palette
+      if (tattoos) {
+        torsoRows[1] = '  STSSSSSSST  '; // arm tats
+        torsoRows[3] = '  STSSCSSSST  '; // arm tats below shoulder
+      }
+    } else {
+      torsoRows = [
+        '   FFFFFFFF   ',
+        '  FFAFFFFAFF  ',
+        '  FFFCCCCFFF  ', // chain over shirt
+        '  FFFFFFFFFF  ',
+        '  FFFFFFFFFF  ',
+        '  FFAAFFAAFF  ',
+      ];
+      if (pattern === 'stripe') {
+        torsoRows[3] = '  FFAAAAAAFF  ';
+        torsoRows[4] = '  FFFFFFFFFF  ';
+      } else if (pattern === 'flame') {
+        torsoRows[3] = '  FFXXXXXXFF  ';
+        torsoRows[4] = '  FFFYYYYFFF  ';
+      }
     }
 
-    // Torso rows — chain on row 8
-    const torsoRows = [
-      '   FFFFFFFF   ',
-      '  FFAFFFFAFF  ',
-      '  FFFCCCCFFF  ', // chain
-      '  FFFFFFFFFF  ',
-      '  FFFFFFFFFF  ',
-      '  FFAAFFAAFF  ',
-    ];
-
-    // Pattern overrides for stripe/flame
-    if (pattern === 'stripe') {
-      torsoRows[3] = '  FFAAAAAAFF  ';
-      torsoRows[4] = '  FFFFFFFFFF  ';
-    } else if (pattern === 'flame') {
-      torsoRows[3] = '  FFXXXXXXFF  ';
-      torsoRows[4] = '  FFFYYYYFFF  ';
-    }
-
+    // === LEGS === jeans always
     const legsRows = [
-      '   FF    FF   ',
-      '   FF    FF   ',
-      '   FF    FF   ',
-      '   PP    PP   ',
-      '   PP    PP   ',
-      '  SSSS  SSSS  ',
+      '   JJ    JJ   ',
+      '   JJ    JJ   ',
+      '   JJ    JJ   ',
+      '   JJ    JJ   ',
+      '   PP    PP   ', // shoes
+      '  SSSS  SSSS  ', // sneaker accent (using skin? no, recolor below)
     ];
 
-    const grid = [...hatRows, ...topRows, ...shadeRows, ...torsoRows, ...legsRows];
+    const grid = [...hatRows, ...faceRows, ...lowerFaceRows, ...torsoRows, ...legsRows];
 
     const palette = {
-      H: hatColor,
+      H: hatColor || skin,  // if no hat, H falls back to skin so hat-area is just hairline
       S: skin,
+      L: skinL,
+      D: skinD,
       E: eye,
-      G: shades ? '#111' : skin,  // shades band color
+      G: shades ? '#111' : skin,
       M: skinD,
       F: fit,
       A: accent,
-      X: '#ff6600',  // flame mid
-      Y: '#ffcc00',  // flame highlight
-      C: chainColor || fit,
-      P: '#222',
+      X: '#ff6600',
+      Y: '#ffcc00',
+      C: chainColor || (shirtless ? '#ffcc00' : fit),
+      T: tatColor, // tattoos
+      J: jeansColor,
+      P: '#1a1a1a',  // shoe sole
     };
+    // If no hat, repaint H rows as transparent (hair) — already handled by mapping H→skin (no-op)
+    if (hat === 'none') palette.H = '#000000';  // little bit of hair on top
 
-    // Walking bob
     const bob = frame % 2 === 0 ? 0 : -1;
     const mirror = dir === 1;
-    const yOff = bob;
 
     if (mirror) {
       ctx.save();
       ctx.translate(Math.floor(x), 0);
       ctx.scale(-1, 1);
-      drawGrid(ctx, 0, y + yOff, grid, palette, 2);
+      drawGrid(ctx, 0, y + bob, grid, palette, 2);
       ctx.restore();
     } else {
-      drawGrid(ctx, x, y + yOff, grid, palette, 2);
+      drawGrid(ctx, x, y + bob, grid, palette, 2);
     }
 
-    // Shades highlight (reflective glint)
+    // Shades glint
     if (shades && !mirror) {
       ctx.fillStyle = '#fff';
-      ctx.fillRect(Math.floor(x - 7), Math.floor(y + yOff - 8), 2, 1);
+      ctx.fillRect(Math.floor(x - 7), Math.floor(y + bob - 8), 2, 1);
     }
 
-    // Headphones earcups (drawn on sides since the front grid can't easily express them)
+    // Headphone earcups
     if (hat === 'headphones') {
       ctx.fillStyle = '#cc0022';
-      ctx.fillRect(Math.floor(x - 11), Math.floor(y + yOff - 6), 3, 4);
-      ctx.fillRect(Math.floor(x + 8), Math.floor(y + yOff - 6), 3, 4);
+      ctx.fillRect(Math.floor(x - 11), Math.floor(y + bob - 6), 3, 4);
+      ctx.fillRect(Math.floor(x + 8), Math.floor(y + bob - 6), 3, 4);
     }
-    // Bandana side flap
+    // Bandana flap
     if (hat === 'bandana') {
       ctx.fillStyle = hatColor;
-      ctx.fillRect(Math.floor(x + 7), Math.floor(y + yOff - 4), 4, 6);
+      ctx.fillRect(Math.floor(x + 7), Math.floor(y + bob - 4), 4, 6);
     }
 
-    // Shadow ellipse under feet
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    // Sneaker stripe
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(Math.floor(x - 7), Math.floor(y + 16), 5, 1);
+    ctx.fillRect(Math.floor(x + 2), Math.floor(y + 16), 5, 1);
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
     ctx.beginPath();
-    ctx.ellipse(x, y + 18, 12, 4, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, y + 19, 13, 4, 0, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // ============ CRAB ENEMY ============
-  function drawCrab(ctx, x, y, frame = 0, hp = 1, hurtFlash = false, scale = 1, tintShell = null) {
+  // ============ CRAB ============
+  function drawCrab(ctx, x, y, frame = 0, hpPct = 1, hurtFlash = false, scale = 1, tintShell = null) {
     const wobble = Math.sin(frame * 0.3) * 1;
     const shellR = tintShell || '#cc0022';
     const shellD = darkenHex(shellR, 0.5);
     const palette = {
-      R: shellR,
-      D: shellD,
-      E: '#fff',
-      B: '#000',
+      R: shellR, D: shellD, E: '#fff', B: '#000',
       C: lightenHex(shellR, 0.25),
     };
     const grid = [
@@ -283,16 +256,28 @@ const Sprites = (() => {
     }
   }
 
-  // ============ PAPARAZZI ENEMY ============
+  // ============ ARMED CRAB GUN ============
+  function drawCrabGun(ctx, x, y, frame = 0) {
+    // Small dark gun on top of crab's shell
+    ctx.fillStyle = '#222';
+    ctx.fillRect(x - 6, y, 12, 3);
+    ctx.fillStyle = '#444';
+    ctx.fillRect(x - 8, y + 1, 3, 2);
+    ctx.fillStyle = '#666';
+    ctx.fillRect(x + 5, y, 4, 2);
+    // muzzle glow if recent shot
+    if (frame % 60 < 4) {
+      ctx.fillStyle = '#ffaa00';
+      ctx.fillRect(x + 9, y, 3, 2);
+    }
+  }
+
+  // ============ PAPARAZZI ============
   function drawPaparazzi(ctx, x, y, frame = 0, hurtFlash = false) {
     const flash = (frame % 30) < 3;
     const palette = {
-      S: '#d4a574',
-      H: '#222',
-      C: '#000',
-      L: flash ? '#ffffff' : '#444',
-      V: '#666',
-      P: '#1a1a1a',
+      S: '#d4a574', H: '#222', C: '#000',
+      L: flash ? '#ffffff' : '#444', V: '#666', P: '#1a1a1a',
     };
     const grid = [
       '   HHHHH   ',
@@ -320,6 +305,62 @@ const Sprites = (() => {
     if (hurtFlash) {
       ctx.fillStyle = 'rgba(255,255,255,0.55)';
       ctx.fillRect(x - 14, y - 14, 28, 28);
+    }
+  }
+
+  // ============ FAN (club outfit + camera) ============
+  function drawFan(ctx, x, y, frame = 0, hurtFlash = false) {
+    const flash = (frame % 30) < 3;
+    const palette = {
+      S: '#e0b58b', // skin
+      H: '#5a2222', // hair (long)
+      D: '#cc4499', // dress / top accent
+      P: '#e94078', // hot pink dress
+      M: '#ff66aa', // dress highlight
+      C: '#000',
+      L: flash ? '#ffffff' : '#888', // camera lens
+      V: '#444', // camera body
+      B: '#000',
+      G: '#ffcc00', // gold details
+      F: '#1a1a1a', // shoes
+    };
+    const grid = [
+      ' HHHHHHHH  ',
+      'HHSSSSSSHH ',
+      'HSSSSSSSSH ',
+      ' HSSSSSSH  ',
+      '  SSSSSS   ',
+      '   CCCC    ',  // camera (heart-eye lens region)
+      '  CLLLLC   ',
+      '  CLLLLC   ',
+      '  PPPPPP   ',  // dress top
+      ' PPMMMMPP  ',
+      'PPPMMMMPPP ',
+      ' SSPPPPSS  ',  // skin: arms beside dress
+      '  SS  SS   ',  // bare legs
+      '  SS  SS   ',
+      '  FF  FF   ',
+    ];
+    drawGrid(ctx, x, y, grid, palette, 2);
+
+    // Camera flash effect when ready
+    if (flash) {
+      ctx.fillStyle = 'rgba(255,200,220,0.6)';
+      ctx.beginPath();
+      ctx.arc(x, y - 4, 16, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Don't shoot indicator — small heart above
+    ctx.fillStyle = '#ff66aa';
+    ctx.fillRect(x - 3, y - 18, 2, 2);
+    ctx.fillRect(x + 1, y - 18, 2, 2);
+    ctx.fillRect(x - 3, y - 16, 6, 2);
+    ctx.fillRect(x - 2, y - 14, 4, 2);
+    ctx.fillRect(x - 1, y - 12, 2, 2);
+
+    if (hurtFlash) {
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.fillRect(x - 12, y - 14, 24, 28);
     }
   }
 
@@ -372,6 +413,36 @@ const Sprites = (() => {
     }
   }
 
+  // ============ SUIT DUDE — pops out of Escalade firing ============
+  function drawSuitDude(ctx, x, y, angle = 0) {
+    const palette = {
+      H: '#000', S: '#d4a574', G: '#111', // shades
+      B: '#111', // suit
+      W: '#fff', // shirt
+      T: '#cc0022', // tie
+    };
+    const grid = [
+      ' HHHHH ',
+      'HSSSSSH',
+      'HSGGSSH', // shades
+      ' SSSSS ',
+      ' BBWBB ',
+      ' BWTWB ',
+      ' BWTWB ',
+    ];
+    drawGrid(ctx, x, y, grid, palette, 2);
+
+    // Gun arm pointing at angle
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.fillStyle = '#111';
+    ctx.fillRect(0, -2, 10, 4);
+    ctx.fillStyle = '#666';
+    ctx.fillRect(8, -1, 4, 2);
+    ctx.restore();
+  }
+
   // ============ BOSSES ============
   function drawGiantCrab(ctx, x, y, frame = 0, hpPct = 1, hurtFlash = false) {
     const wobble = Math.sin(frame * 0.15) * 3;
@@ -411,44 +482,38 @@ const Sprites = (() => {
   function drawSlimey(ctx, x, y, frame = 0, hpPct = 1, hurtFlash = false) {
     const bob = Math.sin(frame * 0.2) * 2;
     const palette = {
-      S: '#6b4423',
-      H: '#222',
-      G: '#00aa44',
-      D: '#006622',
-      C: '#ffcc00',
-      E: '#fff',
-      M: '#cc0000',
-      P: '#000',
-      T: '#ff66cc',
+      S: '#6b4423', H: '#222', G: '#00aa44', D: '#006622',
+      C: '#ffcc00', E: '#fff', M: '#cc0000', P: '#000', T: '#ff66cc',
     };
+    // Slightly slimmer slimey (10 wide instead of 14)
     const grid = [
-      '   HHHHHHHH   ',
-      '  HHHHHHHHHH  ',
-      ' HHSSSSSSSHHH ',
-      ' HSSEESSEESS  ',
-      ' HSSSSSSSSSS  ',
-      ' HSSSTTTTTSSS ',
-      ' HSSSSMSSSSSS ',
-      '  GGGGGGGGGG  ',
-      ' GGGCCCCCGGG  ',
-      'GGGGCCCCCGGGG ',
-      'GGDGGGGGGGDGG ',
-      'GGGGGGGGGGGGG ',
-      ' GG        GG ',
-      ' GG        GG ',
-      ' PP        PP ',
-      ' PP        PP ',
+      '   HHHHHH   ',
+      '  HHHHHHHH  ',
+      ' HHSSSSSSHH ',
+      ' HSEESSEESS ',
+      ' HSSSSSSSSS ',
+      ' HSSTTTTSSS ',
+      ' HSSSMSSSSS ',
+      '  GGGGGGGG  ',
+      ' GGGCCCCGGG ',
+      'GGGGCCCCGGG ',
+      'GGDGGGGGDGG ',
+      'GGGGGGGGGGG ',
+      ' GG      GG ',
+      ' GG      GG ',
+      ' PP      PP ',
+      ' PP      PP ',
     ];
     drawGrid(ctx, x, y + bob, grid, palette, 4);
 
     if (hpPct < 0.5) {
       ctx.strokeStyle = `rgba(0,255,68,${0.5 + Math.sin(frame * 0.4) * 0.3})`;
       ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(x, y, 60, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x, y, 56, 0, Math.PI * 2); ctx.stroke();
     }
     if (hurtFlash) {
       ctx.fillStyle = 'rgba(255,255,255,0.45)';
-      ctx.fillRect(x - 36, y + bob - 36, 72, 80);
+      ctx.fillRect(x - 32, y + bob - 36, 64, 80);
     }
   }
 
@@ -477,15 +542,15 @@ const Sprites = (() => {
       '  HSEESSEESH  ',
       '  HSSSSMSSSH  ',
       '  HSSSSSSSSH  ',
-      '   FFFFFFFF   ',
-      '  FFAFFFFAFF  ',
-      '  FFFCCCCFFF  ',
-      '  FFFFFFFFFF  ',
-      '  FFFFFFFFFF  ',
-      '  FFAAFFAAFF  ',
-      '   FF    FF   ',
-      '   FF    FF   ',
-      '   FF    FF   ',
+      '   SSSSSSSS   ',  // bare chest mirror
+      '  STSSSSSSST  ',
+      '  SSSCCCCSSS  ',
+      '  SSSSSSSSSS  ',
+      '  STSSSSSSST  ',
+      '  SSSSSSSSSS  ',
+      '   JJ    JJ   ',
+      '   JJ    JJ   ',
+      '   JJ    JJ   ',
       '   PP    PP   ',
       '   PP    PP   ',
       '  SSSS  SSSS  ',
@@ -493,7 +558,7 @@ const Sprites = (() => {
     const palette = {
       H: hatColor, S: skin, E: eye, M: '#000', F: fit, A: accent,
       C: dark.chain === 'gold' ? '#aa8800' : '#5588aa',
-      P: '#000',
+      T: '#440000', J: '#000', P: '#000',
     };
     drawGrid(ctx, x, y, grid, palette, 4);
 
@@ -515,22 +580,27 @@ const Sprites = (() => {
     const px = b.prevX || x, py = b.prevY || y;
 
     switch (type) {
-      case 'draco': {
+      case 'draco':
         ctx.strokeStyle = 'rgba(255,170,0,0.4)';
         ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x, y); ctx.stroke();
         ctx.fillStyle = '#ffaa00';
         ctx.fillRect(x - 2, y - 1, 6, 2);
         break;
-      }
-      case 'glock': {
+      case 'glock':
         ctx.strokeStyle = 'rgba(255,238,136,0.3)';
         ctx.lineWidth = 1;
         ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x, y); ctx.stroke();
         ctx.fillStyle = '#ffee88';
         ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.fill();
         break;
-      }
+      case 'shotgun':
+        ctx.strokeStyle = 'rgba(255,180,80,0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x, y); ctx.stroke();
+        ctx.fillStyle = '#ffaa44';
+        ctx.fillRect(x - 1, y - 1, 3, 3);
+        break;
       case 'rpg': {
         ctx.strokeStyle = 'rgba(160,160,160,0.5)';
         ctx.lineWidth = 3;
@@ -543,7 +613,7 @@ const Sprites = (() => {
         ctx.restore();
         break;
       }
-      case 'laser': {
+      case 'laser':
         ctx.strokeStyle = 'rgba(255,0,255,0.5)';
         ctx.lineWidth = 5;
         ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x, y); ctx.stroke();
@@ -552,14 +622,12 @@ const Sprites = (() => {
         ctx.fillStyle = '#fff';
         ctx.fillRect(x - 5, y - 1, 10, 2);
         break;
-      }
-      case 'enemy': {
+      case 'enemy':
         ctx.fillStyle = 'rgba(255,68,68,0.4)';
         ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = '#ff4444';
         ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
         break;
-      }
       default:
         ctx.fillStyle = '#fff';
         ctx.fillRect(x - 1, y - 1, 2, 2);
@@ -634,30 +702,89 @@ const Sprites = (() => {
         ctx.fillStyle = '#fff';
         ctx.fillRect(x - 3, ny - 6 - Math.sin(frame * 0.3) * 2, 2, 2);
         break;
+      case 'lightning':
+        // Yellow lightning bolt
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.moveTo(x - 2, ny - 8);
+        ctx.lineTo(x + 4, ny - 2);
+        ctx.lineTo(x + 1, ny - 2);
+        ctx.lineTo(x + 3, ny + 6);
+        ctx.lineTo(x - 4, ny);
+        ctx.lineTo(x - 1, ny);
+        ctx.lineTo(x - 3, ny - 8);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#ffee00';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        break;
+      case 'slowmo':
+        // Hourglass
+        ctx.fillStyle = '#88ddff';
+        ctx.beginPath();
+        ctx.moveTo(x - 6, ny - 6);
+        ctx.lineTo(x + 6, ny - 6);
+        ctx.lineTo(x - 6, ny + 6);
+        ctx.lineTo(x + 6, ny + 6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        break;
     }
   }
 
-  // ============ CASH (coin) ============
+  // ============ CASH ============
   function drawCash(ctx, x, y, frame = 0, lifePct = 1) {
     const flip = Math.abs(Math.sin(frame * 0.12));
     const w = Math.max(3, Math.round(8 * flip));
     const alpha = lifePct < 0.2 ? lifePct / 0.2 : 1;
     ctx.save();
     ctx.globalAlpha = alpha;
-    // Outer ring
     ctx.fillStyle = '#aa7700';
     ctx.fillRect(x - w/2 - 1, y - 4, w + 2, 8);
-    // Inner glow
     ctx.fillStyle = '#ffcc00';
     ctx.fillRect(x - w/2, y - 3, w, 6);
-    // Highlight stripe
     ctx.fillStyle = '#ffee88';
     ctx.fillRect(x - w/2, y - 2, w, 2);
-    // Dollar sign (only visible at certain angles)
     if (flip > 0.7) {
       ctx.fillStyle = '#664400';
       ctx.fillRect(x - 1, y - 2, 2, 4);
     }
+    ctx.restore();
+  }
+
+  // ============ BLOOD SPLAT (ground decal) ============
+  function drawBloodSplat(ctx, splat) {
+    ctx.save();
+    const alpha = Math.min(1, splat.life / 8000);
+    ctx.globalAlpha = alpha * 0.7;
+    ctx.fillStyle = '#660000';
+    for (const dot of splat.dots) {
+      ctx.fillRect(splat.x + dot.dx - dot.r, splat.y + dot.dy - dot.r, dot.r * 2, dot.r * 2);
+    }
+    ctx.restore();
+  }
+
+  // ============ SONIC WAVE ============
+  function drawSonicWave(ctx, w) {
+    const a = w.life / w.maxLife;
+    const range = w.range * (1 - a) + 30;
+    ctx.save();
+    ctx.translate(w.x, w.y);
+    ctx.rotate(w.angle);
+    ctx.strokeStyle = `rgba(170,200,255,${a * 0.8})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, 0, range, -w.arc, w.arc);
+    ctx.stroke();
+    ctx.strokeStyle = `rgba(255,255,255,${a * 0.5})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(0, 0, range - 8, -w.arc, w.arc);
+    ctx.stroke();
     ctx.restore();
   }
 
@@ -688,8 +815,8 @@ const Sprites = (() => {
   }
 
   return {
-    drawPlayer, drawCrab, drawPaparazzi, drawTruck,
+    drawPlayer, drawCrab, drawCrabGun, drawPaparazzi, drawFan, drawTruck, drawSuitDude,
     drawGiantCrab, drawSlimey, drawMirror2X,
-    drawBullet, drawPowerUp, drawCash, drawParticle, drawMuzzleFlash,
+    drawBullet, drawPowerUp, drawCash, drawBloodSplat, drawSonicWave, drawParticle, drawMuzzleFlash,
   };
 })();

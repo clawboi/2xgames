@@ -1,40 +1,45 @@
-// waves.js — wave progression + boss schedule + variant enemy probabilities
+// waves.js — wave progression. Gradually scales crab HP, introduces new enemies.
+// Boss difficulty mult: each new boss is ~30% tougher than the previous one.
 
 const Waves = (() => {
-  // Boss waves: 5 = Giant Crab, 10 = 2Slimey, 15 = Mirror 2X
-  // After 15 it loops with scaling difficulty
 
   function getWaveConfig(waveNum) {
-    if (waveNum === 5)  return { type: 'boss', boss: 'giantCrab', minions: 4,  spawnInterval: 900 };
-    if (waveNum === 10) return { type: 'boss', boss: 'slimey',    minions: 8,  spawnInterval: 800 };
-    if (waveNum === 15) return { type: 'boss', boss: 'mirror',    minions: 6,  spawnInterval: 1000 };
+    if (waveNum === 5)  return { type: 'boss', boss: 'giantCrab', hpMult: 1.0, minions: 4,  spawnInterval: 900,  arena: 'underwater' };
+    if (waveNum === 10) return { type: 'boss', boss: 'slimey',    hpMult: 1.3, minions: 8,  spawnInterval: 800,  arena: 'moshpit' };
+    if (waveNum === 15) return { type: 'boss', boss: 'mirror',    hpMult: 1.7, minions: 6,  spawnInterval: 1000, arena: 'cage' };
 
-    // Normal wave: scale difficulty + introduce new enemy types over time
-    const mod = 1 + (waveNum - 1) * 0.12; // 12% harder per wave
-    const total = Math.min(8 + waveNum * 2, 45);
+    // Normal wave: scale by wave number, capped to keep playable
+    const mod = Math.min(2.4, 1 + (waveNum - 1) * 0.10); // 10% HP per wave, max 240%
+    const total = Math.min(8 + waveNum * 2, 50);
 
-    // Spawn probabilities (sum should be <= ~0.6, rest are basic crabs)
-    let paparazzi = 0, fast = 0, tank = 0, exploder = 0;
-    if (waveNum >= 2)  paparazzi = 0.15;
+    // Spawn probabilities — sum can be up to ~0.8, remainder = regular crabs
+    let paparazzi = 0, fast = 0, tank = 0, exploder = 0, armed = 0, fan = 0;
+    if (waveNum >= 2)  paparazzi = 0.12;
     if (waveNum >= 3)  fast = 0.12;
-    if (waveNum >= 4)  paparazzi = 0.20;
+    if (waveNum >= 4)  paparazzi = 0.16;
     if (waveNum >= 6)  { tank = 0.10; fast = 0.18; }
     if (waveNum >= 7)  exploder = 0.10;
-    if (waveNum >= 8)  paparazzi = 0.22;
-    if (waveNum >= 11) { tank = 0.15; exploder = 0.15; fast = 0.20; }
-    if (waveNum >= 13) { tank = 0.18; exploder = 0.18; }
+    if (waveNum >= 8)  armed = 0.15;          // ARMED CRABS at wave 8+
+    if (waveNum >= 10) { fan = 0.15; paparazzi = 0.06; }  // FANS appear at 10+ (replacing some paparazzi)
+    if (waveNum >= 11) { tank = 0.14; exploder = 0.14; fast = 0.18; armed = 0.18; }
+    if (waveNum >= 13) { tank = 0.16; exploder = 0.16; armed = 0.20; fan = 0.18; }
 
     return {
       type: 'normal',
       enemyCount: total,
       hpMod: mod,
-      paparazziChance: paparazzi, // legacy field kept for safety
-      spawnProbs: { paparazzi, fastCrab: fast, tankCrab: tank, exploder },
-      spawnInterval: Math.max(280, 900 - waveNum * 35),
+      spawnProbs: { paparazzi, fastCrab: fast, tankCrab: tank, exploder, armed, fan },
+      spawnInterval: Math.max(260, 900 - waveNum * 32),
     };
   }
 
   function isBossWave(waveNum) { return waveNum === 5 || waveNum === 10 || waveNum === 15; }
 
-  return { getWaveConfig, isBossWave };
+  // Boss extra HP from completed runs (scales replay value)
+  function bossHpMult(bossKey, completedRuns = 0) {
+    const cfg = bossKey === 'giantCrab' ? 1.0 : bossKey === 'slimey' ? 1.3 : 1.7;
+    return cfg * (1 + completedRuns * 0.3);
+  }
+
+  return { getWaveConfig, isBossWave, bossHpMult };
 })();

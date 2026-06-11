@@ -1,8 +1,4 @@
-// audio.js — music + procedural sound effects
-// FIX: unlock() no longer pauses tracks (which was racing with playMusic).
-// Instead, we just call .play() once on each track in the same gesture to
-// satisfy iOS, then pause the ones we don't want. The track that's CURRENTLY
-// requested stays playing.
+// audio.js — music + procedural SFX. v4 adds volume slider + MediaSession cleanup.
 
 const Audio = (() => {
   let unlocked = false;
@@ -12,7 +8,7 @@ const Audio = (() => {
   let currentTrackName = null;
   let pendingTrack = null;
   let ctx = null;
-  const masterMusicVol = 0.45;
+  let masterMusicVol = 0.45;
 
   const tracks = {
     menu:     document.getElementById('music-menu'),
@@ -33,33 +29,35 @@ const Audio = (() => {
     } catch (e) { return null; }
   }
 
-  // Called on the FIRST user gesture.
-  // Strategy: gesture-priming play+pause every track THAT WE DON'T CURRENTLY WANT,
-  // then play the one we DO want. iOS counts a paused-then-played track as "unlocked."
+  function clearMediaSession() {
+    try {
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = null;
+        navigator.mediaSession.playbackState = 'none';
+      }
+    } catch (e) {}
+  }
+
   function unlock() {
     if (unlocked) return;
     unlocked = true;
     getCtx();
-    // For each track other than the pending one, do a silent play+immediate pause to register them
     const wanted = pendingTrack;
     Object.entries(tracks).forEach(([name, t]) => {
       if (!t) return;
       try {
-        t.muted = true;       // prime silently
+        t.muted = true;
         const p = t.play();
         if (p && p.then) {
-          p.then(() => {
-            try { t.pause(); t.currentTime = 0; t.muted = false; } catch (e) {}
-          }).catch(() => { t.muted = false; });
+          p.then(() => { try { t.pause(); t.currentTime = 0; t.muted = false; } catch (e) {} })
+           .catch(() => { t.muted = false; });
         } else {
           try { t.pause(); t.currentTime = 0; t.muted = false; } catch (e) {}
         }
       } catch (e) {}
     });
-    // Now actually play the pending track (or none)
     if (wanted) {
       pendingTrack = null;
-      // Slight delay to let the muted-prime resolve first on iOS
       setTimeout(() => playMusic(wanted), 80);
     }
   }
@@ -70,7 +68,6 @@ const Audio = (() => {
     const t = tracks[name];
     if (!t) return;
     if (currentTrack === t && !t.paused) return;
-    // Stop the previous track fast
     if (currentTrack && currentTrack !== t) {
       try { currentTrack.pause(); currentTrack.currentTime = 0; } catch (e) {}
     }
@@ -103,24 +100,38 @@ const Audio = (() => {
       currentTrackName = null;
     }
     pendingTrack = null;
+    clearMediaSession();
+  }
+
+  function pauseAll() {
+    if (currentTrack) { try { currentTrack.pause(); } catch (e) {} }
+    clearMediaSession();
+  }
+  function resume() {
+    if (musicEnabled && currentTrack && currentTrack.paused) {
+      try { currentTrack.volume = masterMusicVol; currentTrack.play().catch(() => {}); } catch (e) {}
+    }
   }
 
   function setMusicEnabled(on) {
     musicEnabled = on;
     if (!on && currentTrack) {
       try { currentTrack.pause(); } catch (e) {}
+      clearMediaSession();
     } else if (on && currentTrackName) {
       const t = tracks[currentTrackName];
-      if (t && t.paused) {
-        try { t.volume = masterMusicVol; t.play().catch(() => {}); } catch (e) {}
-      }
+      if (t && t.paused) { try { t.volume = masterMusicVol; t.play().catch(() => {}); } catch (e) {} }
     }
   }
   function setSfxEnabled(on) { sfxEnabled = on; }
+  function setMusicVolume(v) {
+    masterMusicVol = Math.max(0, Math.min(1, v));
+    if (currentTrack) { try { currentTrack.volume = masterMusicVol; } catch (e) {} }
+  }
+  function getMusicVolume() { return masterMusicVol; }
   function isMusicEnabled() { return musicEnabled; }
   function isSfxEnabled() { return sfxEnabled; }
 
-  // === Procedural SFX ===
   function beep({ freq = 440, type = 'square', dur = 0.08, vol = 0.15, slide = 0 }) {
     if (!sfxEnabled || !unlocked) return;
     try {
@@ -137,7 +148,6 @@ const Audio = (() => {
       osc.stop(c.currentTime + dur);
     } catch (e) {}
   }
-
   function noise({ dur = 0.15, vol = 0.2, filterFreq = 1000 }) {
     if (!sfxEnabled || !unlocked) return;
     try {
@@ -180,7 +190,14 @@ const Audio = (() => {
     gameOver: () => { beep({ freq: 400, type: 'sawtooth', dur: 0.3, vol: 0.2, slide: -300 }); setTimeout(() => beep({ freq: 200, type: 'sawtooth', dur: 0.5, vol: 0.2, slide: -150 }), 200); },
     victory:  () => { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep({ freq: f, type: 'square', dur: 0.18, vol: 0.15 }), i * 120)); },
     highScore:() => { [523, 659, 784, 988, 1175, 1568].forEach((f, i) => setTimeout(() => beep({ freq: f, type: 'square', dur: 0.12, vol: 0.13 }), i * 90)); },
+    thunder:  () => { noise({ dur: 0.6, vol: 0.3, filterFreq: 200 }); beep({ freq: 60, type: 'sawtooth', dur: 0.4, vol: 0.18, slide: -30 }); },
   };
 
-  return { unlock, playMusic, stopMusic, setMusicEnabled, setSfxEnabled, isMusicEnabled, isSfxEnabled, sfx, get isUnlocked() { return unlocked; } };
+  return {
+    unlock, playMusic, stopMusic, pauseAll, resume,
+    setMusicEnabled, setSfxEnabled, setMusicVolume, getMusicVolume,
+    isMusicEnabled, isSfxEnabled,
+    sfx,
+    get isUnlocked() { return unlocked; }
+  };
 })();
