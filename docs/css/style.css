@@ -6,7 +6,6 @@ html, body {
   font-family: 'Courier New', monospace;
   color: #fff;
   user-select: none; -webkit-user-select: none;
-  /* iPhone safe-area awareness */
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
   padding-left: env(safe-area-inset-left);
@@ -20,51 +19,75 @@ button { font-family: inherit; cursor: pointer; border: none; outline: none; }
 .screen {
   position: fixed; inset: 0;
   display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  padding: 20px;
+  align-items: center; justify-content: flex-start;
+  padding: 16px 16px 24px;
+  overflow-y: auto;
 }
 
-/* ============ TITLE / START SCREEN ============ */
+/* ============ TITLE — PUNK RED ============ */
 .title {
-  font-size: clamp(36px, 10vw, 72px);
-  letter-spacing: 4px; text-align: center;
-  margin-bottom: 8px;
-  text-shadow: 0 0 20px #00ff66, 4px 4px 0 #cc0022;
-  animation: title-glow 3s ease-in-out infinite;
+  font-size: clamp(40px, 11vw, 84px);
+  letter-spacing: 6px; text-align: center;
+  margin: 8px 0 4px;
+  position: relative;
+  line-height: 0.95;
 }
-@keyframes title-glow {
-  0%, 100% { text-shadow: 0 0 20px #00ff66, 4px 4px 0 #cc0022; }
-  50%      { text-shadow: 0 0 30px #00ff66, 4px 4px 0 #cc0022, 0 0 40px rgba(0,255,102,0.4); }
+.title-main {
+  display: inline-block;
+  color: #ff0033;
+  text-shadow:
+    0 0 10px #ff0033,
+    0 0 25px #cc0022,
+    3px 3px 0 #000,
+    -3px -3px 0 #000,
+    3px -3px 0 #000,
+    -3px 3px 0 #000;
+  /* Aggressive italic slant */
+  transform: skewX(-6deg);
+  animation: title-rage 1.4s ease-in-out infinite;
+  /* Subtle "torn paper" feel */
+  filter: drop-shadow(0 4px 0 #660011);
 }
-.title-crab { color: #00ff66; }
-.title-cage { color: #cc0022; }
-.title-2x   { display: block; color: #fff; font-size: 0.6em; }
-
-#menu-mute-btn {
-  position: fixed;
-  top: calc(env(safe-area-inset-top, 0) + 12px);
-  right: 12px;
-  background: rgba(0,0,0,0.6);
+.title-2x {
+  display: block;
   color: #fff;
-  border: 1px solid #444;
-  width: 40px; height: 40px;
-  font-size: 18px;
-  border-radius: 50%;
-  z-index: 200;
-  cursor: pointer;
+  font-size: 0.55em;
+  letter-spacing: 12px;
+  text-shadow: 3px 3px 0 #ff0033, 0 0 14px #ff0033;
+  margin-top: 4px;
+  transform: skewX(-6deg);
 }
-#menu-mute-btn.muted { color: #cc0022; border-color: #cc0022; }
+@keyframes title-rage {
+  0%, 100% { transform: skewX(-6deg) scale(1); }
+  50%      { transform: skewX(-6deg) scale(1.04); filter: drop-shadow(0 4px 0 #660011) drop-shadow(0 0 12px #ff0033); }
+}
 
 .tagline {
-  color: #888; letter-spacing: 2px; margin-bottom: 20px;
-  font-size: clamp(11px, 3vw, 14px);
+  color: #ff6677; letter-spacing: 3px; margin-bottom: 14px;
+  font-size: clamp(10px, 2.6vw, 13px);
   text-align: center;
+  font-weight: bold;
+}
+
+/* High score display top-left */
+#high-score-display {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0) + 14px);
+  left: 14px;
+  background: rgba(0,0,0,0.7);
+  color: #ffcc00;
+  border: 2px solid #ffcc00;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  z-index: 200;
 }
 
 .char-preview {
-  background: #111; border: 2px solid #00ff66;
-  padding: 10px; margin-bottom: 16px;
-  box-shadow: 0 0 30px rgba(0, 255, 102, 0.3);
+  background: #111; border: 2px solid #ff0033;
+  padding: 8px; margin-bottom: 12px;
+  box-shadow: 0 0 30px rgba(255, 0, 51, 0.4);
 }
 #char-canvas {
   image-rendering: pixelated;
@@ -73,61 +96,67 @@ button { font-family: inherit; cursor: pointer; border: none; outline: none; }
 }
 
 .customizer {
-  width: 100%; max-width: 380px;
-  margin-bottom: 20px;
+  width: 100%; max-width: 420px;
+  margin-bottom: 12px;
 }
 .cust-row {
   display: flex; align-items: center; gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
 }
 .cust-row label {
-  font-size: 11px; letter-spacing: 1px;
-  width: 80px; color: #888;
+  font-size: 11px; letter-spacing: 1.5px;
+  width: 70px; color: #ff6677;
+  font-weight: bold;
 }
-.swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+.swatches { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; }
 .swatch {
-  width: 28px; height: 28px;
+  width: 26px; height: 26px;
   border: 2px solid #333;
   transition: border-color 0.15s, transform 0.15s;
 }
-.swatch.selected { border-color: #fff; transform: scale(1.15); }
+.swatch.selected { border-color: #fff; transform: scale(1.15); box-shadow: 0 0 8px rgba(255,255,255,0.5); }
 
 .hat-btn {
-  background: #222; color: #fff;
+  background: #1a1a1a; color: #fff;
   border: 2px solid #333;
-  padding: 6px 10px; font-size: 10px; letter-spacing: 1px;
+  padding: 5px 8px; font-size: 9px; letter-spacing: 1px;
+  font-weight: bold;
 }
-.hat-btn.selected { border-color: #fff; background: #00ff66; color: #000; }
+.hat-btn.selected { border-color: #fff; background: #ff0033; color: #000; box-shadow: 0 0 8px rgba(255,0,51,0.5); }
 
 /* ============ BUTTONS ============ */
 .big-btn {
-  background: linear-gradient(180deg, #00ff66, #00aa44);
-  color: #000;
+  background: linear-gradient(180deg, #ff0033, #aa0011);
+  color: #fff;
   padding: 14px 36px;
-  font-size: 18px; font-weight: bold; letter-spacing: 3px;
+  font-size: 18px; font-weight: bold; letter-spacing: 4px;
   border: 3px solid #000;
-  box-shadow: 4px 4px 0 #cc0022;
-  transition: transform 0.1s;
+  box-shadow: 4px 4px 0 #000, 0 0 16px rgba(255,0,51,0.4);
+  transition: transform 0.08s, box-shadow 0.08s;
   margin: 4px;
+  text-shadow: 1px 1px 0 #000;
 }
-.big-btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #cc0022; }
+.big-btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
 .small-btn {
-  background: transparent; color: #888;
-  padding: 8px 16px; font-size: 12px; letter-spacing: 2px;
-  border: 1px solid #444;
-  margin-top: 8px;
+  background: transparent; color: #ff6677;
+  padding: 7px 14px; font-size: 11px; letter-spacing: 2px;
+  border: 1px solid #ff0033;
+  margin-top: 6px;
+  font-weight: bold;
 }
+.small-btn:hover { background: rgba(255,0,51,0.1); }
 
 /* ============ HOW TO ============ */
 .howto-content {
-  max-width: 500px; padding: 20px;
-  background: rgba(0,0,0,0.7); border: 1px solid #333;
-  margin-bottom: 20px;
-  font-size: 13px; line-height: 1.6;
-  max-height: 60vh; overflow-y: auto;
+  max-width: 540px; padding: 20px;
+  background: rgba(0,0,0,0.85); border: 1px solid #ff0033;
+  margin-bottom: 16px;
+  font-size: 12px; line-height: 1.6;
+  max-height: 65vh; overflow-y: auto;
 }
-.howto-content p { margin-bottom: 10px; }
-.howto-content strong { color: #00ff66; }
+.howto-content p { margin-bottom: 8px; }
+.howto-content strong { color: #ff0033; }
 
 /* ============ GAME SCREEN ============ */
 #game-canvas {
@@ -148,23 +177,26 @@ button { font-family: inherit; cursor: pointer; border: none; outline: none; }
   z-index: 10;
 }
 .hud-row {
-  display: flex; gap: 10px; margin-bottom: 4px;
+  display: flex; gap: 8px; margin-bottom: 4px;
   align-items: center;
+  flex-wrap: wrap;
 }
-.hud-bar { flex: 1; display: flex; align-items: center; gap: 6px; max-width: 200px; }
-.hud-label { font-size: 10px; color: #fff; width: 38px; }
+.hud-bar { flex: 1; display: flex; align-items: center; gap: 6px; max-width: 200px; min-width: 120px; }
+.hud-label { font-size: 10px; color: #fff; width: 38px; font-weight: bold; }
 .bar {
   flex: 1; height: 10px;
-  background: rgba(0,0,0,0.6); border: 1px solid #fff;
+  background: rgba(0,0,0,0.7); border: 1px solid #fff;
 }
 .bar-fill { height: 100%; width: 100%; transition: width 0.2s; }
-.bar-fill.hp { background: linear-gradient(90deg, #cc0022, #ff4444); }
-.bar-fill.truck { background: linear-gradient(90deg, #ffaa00, #ffdd00); }
+.bar-fill.hp { background: linear-gradient(90deg, #cc0022, #ff4444); box-shadow: inset 0 0 4px rgba(255,68,68,0.5); }
+.bar-fill.truck { background: linear-gradient(90deg, #ffaa00, #ffdd00); box-shadow: inset 0 0 4px rgba(255,221,0,0.5); }
 .hud-stat {
-  font-size: 11px; color: #00ff66;
-  background: rgba(0,0,0,0.6); padding: 3px 8px;
-  border: 1px solid #00ff66;
+  font-size: 11px; color: #ff0033;
+  background: rgba(0,0,0,0.7); padding: 3px 8px;
+  border: 1px solid #ff0033;
+  font-weight: bold;
 }
+.hud-stat.hud-cash { color: #ffcc00; border-color: #ffcc00; }
 
 /* ============ WEAPON BAR ============ */
 #weapon-bar {
@@ -175,12 +207,14 @@ button { font-family: inherit; cursor: pointer; border: none; outline: none; }
   z-index: 10;
 }
 .weapon-slot {
-  background: rgba(0,0,0,0.7); color: #fff;
+  background: rgba(0,0,0,0.75); color: #fff;
   border: 2px solid #555;
   padding: 6px 8px; font-size: 10px;
-  letter-spacing: 1px; min-width: 60px;
+  letter-spacing: 1px; min-width: 64px;
+  font-weight: bold;
+  transition: border-color 0.1s, color 0.1s;
 }
-.weapon-slot.active { border-color: #00ff66; background: rgba(0,255,102,0.2); color: #00ff66; }
+.weapon-slot.active { border-color: #ff0033; background: rgba(255,0,51,0.25); color: #fff; box-shadow: 0 0 8px rgba(255,0,51,0.4); }
 .weapon-slot.locked { opacity: 0.4; }
 .weapon-slot.unlocked-special { border-color: #ff00ff; color: #ff00ff; }
 
@@ -192,10 +226,9 @@ button { font-family: inherit; cursor: pointer; border: none; outline: none; }
   height: 180px;
   z-index: 20;
   pointer-events: none;
-  display: none; /* hidden by default; shown on touch devices */
+  display: none;
 }
 
-/* Detect touch device via media query */
 @media (hover: none) and (pointer: coarse) {
   #touch-controls { display: block; }
 }
@@ -208,7 +241,7 @@ button { font-family: inherit; cursor: pointer; border: none; outline: none; }
   background: rgba(0,0,0,0.25);
   border: 2px solid rgba(255,255,255,0.2);
   border-radius: 50%;
-  pointer-events: none; /* doesn't capture — input.js handles whole left half */
+  pointer-events: none;
   touch-action: none;
   transition: opacity 0.2s, background 0.15s;
   opacity: 0.5;
@@ -216,17 +249,17 @@ button { font-family: inherit; cursor: pointer; border: none; outline: none; }
 #joystick.active {
   opacity: 1;
   background: rgba(0,0,0,0.45);
-  border-color: rgba(0,255,102,0.5);
+  border-color: rgba(255,0,51,0.5);
 }
 #joystick-stick {
   position: absolute;
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   width: 48px; height: 48px;
-  background: rgba(0,255,102,0.6);
-  border: 2px solid #00ff66;
+  background: rgba(255,0,51,0.6);
+  border: 2px solid #ff0033;
   border-radius: 50%;
-  box-shadow: 0 0 12px rgba(0,255,102,0.5);
+  box-shadow: 0 0 12px rgba(255,0,51,0.5);
 }
 
 #touch-actions {
@@ -248,21 +281,21 @@ button { font-family: inherit; cursor: pointer; border: none; outline: none; }
 }
 .touch-btn:active { transform: scale(0.92); }
 #dash-btn { width: 60px; height: 60px; }
-#fire-btn { width: 90px; height: 90px; background: rgba(204,0,34,0.55); border-color: #cc0022; font-size: 14px; box-shadow: 0 0 16px rgba(204,0,34,0.4); }
-#fire-btn:active { background: rgba(204,0,34,0.85); }
+#fire-btn { width: 90px; height: 90px; background: rgba(255,0,51,0.55); border-color: #ff0033; font-size: 14px; box-shadow: 0 0 16px rgba(255,0,51,0.4); }
+#fire-btn:active { background: rgba(255,0,51,0.85); }
 
 .corner-btn {
   position: absolute;
   top: calc(env(safe-area-inset-top, 0) + 8px);
   right: 8px;
-  background: rgba(0,0,0,0.6);
-  color: #fff; border: 1px solid #fff;
+  background: rgba(0,0,0,0.7);
+  color: #fff; border: 1px solid #ff0033;
   width: 36px; height: 36px;
   font-size: 14px;
+  font-weight: bold;
   z-index: 30;
 }
 
-/* On touch devices, move pause button to avoid weapon bar */
 @media (hover: none) and (pointer: coarse) {
   .corner-btn {
     top: calc(env(safe-area-inset-top, 0) + 8px);
@@ -270,25 +303,62 @@ button { font-family: inherit; cursor: pointer; border: none; outline: none; }
   }
 }
 
+#menu-mute-btn {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0) + 12px);
+  right: 12px;
+  background: rgba(0,0,0,0.7);
+  color: #fff;
+  border: 2px solid #ff0033;
+  width: 40px; height: 40px;
+  font-size: 18px;
+  border-radius: 50%;
+  z-index: 200;
+  cursor: pointer;
+}
+#menu-mute-btn.muted { color: #444; border-color: #444; }
+
 /* ============ OVERLAYS ============ */
 .overlay {
   position: fixed; inset: 0;
-  background: rgba(0,0,0,0.85);
+  background: rgba(0,0,0,0.88);
   display: flex; align-items: center; justify-content: center;
   z-index: 100;
 }
 .overlay-content {
   display: flex; flex-direction: column; align-items: center; gap: 8px;
   padding: 30px;
-  background: #111; border: 2px solid #00ff66;
+  background: #111; border: 2px solid #ff0033;
   max-width: 90vw;
+  box-shadow: 0 0 30px rgba(255,0,51,0.3);
 }
 .overlay-content h2 {
   font-size: 32px; letter-spacing: 4px; margin-bottom: 12px;
-  color: #00ff66;
+  color: #ff0033;
+  text-shadow: 2px 2px 0 #000;
+}
+.overlay-content h2.new-high {
+  color: #ffcc00;
+  text-shadow: 0 0 20px #ffcc00, 2px 2px 0 #000;
+  animation: high-pulse 1s ease-in-out infinite;
+}
+@keyframes high-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.08); }
+}
+.new-record {
+  display: inline-block;
+  color: #ffcc00;
+  font-weight: bold;
+  font-size: 14px;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+  animation: high-pulse 0.8s ease-in-out infinite;
+  text-shadow: 0 0 10px #ffcc00;
 }
 .overlay-content p {
   color: #ccc; margin-bottom: 12px; text-align: center;
+  line-height: 1.6;
 }
 .audio-toggle {
   display: flex; gap: 16px; margin-top: 12px;
@@ -306,22 +376,24 @@ button { font-family: inherit; cursor: pointer; border: none; outline: none; }
   font-size: clamp(36px, 12vw, 72px);
   letter-spacing: 8px;
   color: #fff;
-  text-shadow: 0 0 30px #cc0022, 4px 4px 0 #000;
+  text-shadow: 0 0 30px #ff0033, 4px 4px 0 #000;
   animation: banner-pulse 2s ease-out forwards;
 }
 @keyframes banner-pulse {
-  0% { opacity: 0; transform: scale(2); }
-  20% { opacity: 1; transform: scale(1); }
-  80% { opacity: 1; transform: scale(1); }
+  0%   { opacity: 0; transform: scale(2); }
+  20%  { opacity: 1; transform: scale(1); }
+  80%  { opacity: 1; transform: scale(1); }
   100% { opacity: 0; transform: scale(1.5); }
 }
 
 /* ============ LANDSCAPE OPTIMIZATION FOR PHONE ============ */
 @media (orientation: landscape) and (max-height: 500px) {
   .title { font-size: 32px; margin-bottom: 4px; }
-  .tagline { margin-bottom: 8px; }
-  .char-preview { padding: 4px; margin-bottom: 8px; }
+  .tagline { margin-bottom: 6px; }
+  .char-preview { padding: 4px; margin-bottom: 6px; }
   #char-canvas { width: 60px; height: 80px; }
-  .customizer { max-width: 300px; }
-  .cust-row { margin-bottom: 4px; }
+  .customizer { max-width: 360px; }
+  .cust-row { margin-bottom: 3px; }
+  .hat-btn { padding: 3px 6px; font-size: 8px; }
+  .swatch { width: 22px; height: 22px; }
 }

@@ -189,11 +189,11 @@ class Player {
     } else {
       this.hp -= amt;
     }
+    if (game) game.waveDamageTaken = (game.waveDamageTaken || 0) + amt;
     this.hurtFlash = 200;
-    Audio.sfx.hurt();
-    game.addScreenShake(5);
-    game.breakCombo();
-    if (this.hp <= 0) { this.hp = 0; game.onPlayerDeath(); }
+    try { Audio.sfx.hurt(); } catch (e) {}
+    if (game) { game.addScreenShake(5); game.breakCombo(); }
+    if (this.hp <= 0) { this.hp = 0; if (game) game.onPlayerDeath(); }
   }
 
   applyPowerUp(type, game) {

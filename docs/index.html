@@ -2,35 +2,33 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>CRABCAGE VIDEO GAME 2X</title>
+  <title>CRABCAGE 2X</title>
 
-  <!-- Mobile / iPhone viewport: covers notch, prevents zoom, locks scale -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="mobile-web-app-capable" content="yes" />
 
-  <!-- iOS-specific: install to home screen + fullscreen + status bar styling -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="CRABCAGE 2X" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link rel="apple-touch-startup-image" href="icons/icon-512.png" />
 
-  <!-- PWA manifest (for Android + Chrome install banner) -->
   <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="theme-color" content="#cc0022" />
 
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
 
-  <!-- ============ START SCREEN: character customization ============ -->
+  <!-- ============ START SCREEN ============ -->
   <div id="start-screen" class="screen">
     <button id="menu-mute-btn" title="Toggle audio">🔊</button>
+    <div id="high-score-display">HIGH 0</div>
     <h1 class="title">
-      <span class="title-crab">CRAB</span><span class="title-cage">CAGE</span>
+      <span class="title-main">CRABCAGE</span>
       <span class="title-2x">2X</span>
     </h1>
-    <p class="tagline">protect the escalade. survive the swarm.</p>
+    <p class="tagline">// protect the escalade. survive the swarm. //</p>
 
     <div class="char-preview">
       <canvas id="char-canvas" width="120" height="160"></canvas>
@@ -38,12 +36,15 @@
 
     <div class="customizer">
       <div class="cust-row">
-        <label>FIT COLOR</label>
+        <label>FIT</label>
         <div class="swatches" id="fit-swatches">
           <button class="swatch" data-fit="#00ff66" style="background:#00ff66"></button>
           <button class="swatch" data-fit="#cc0022" style="background:#cc0022"></button>
           <button class="swatch" data-fit="#ffcc00" style="background:#ffcc00"></button>
           <button class="swatch" data-fit="#9933ff" style="background:#9933ff"></button>
+          <button class="swatch" data-fit="#00aaff" style="background:#00aaff"></button>
+          <button class="swatch" data-fit="#ff00aa" style="background:#ff00aa"></button>
+          <button class="swatch" data-fit="#ff6600" style="background:#ff6600"></button>
           <button class="swatch" data-fit="#ffffff" style="background:#ffffff"></button>
         </div>
       </div>
@@ -55,17 +56,41 @@
           <button class="swatch" data-accent="#00ff66" style="background:#00ff66"></button>
           <button class="swatch" data-accent="#000000" style="background:#000000"></button>
           <button class="swatch" data-accent="#ffcc00" style="background:#ffcc00"></button>
+          <button class="swatch" data-accent="#9933ff" style="background:#9933ff"></button>
+          <button class="swatch" data-accent="#00aaff" style="background:#00aaff"></button>
           <button class="swatch" data-accent="#ffffff" style="background:#ffffff"></button>
         </div>
       </div>
 
       <div class="cust-row">
-        <label>HEADWEAR</label>
+        <label>HEAD</label>
         <div class="swatches" id="hat-swatches">
           <button class="hat-btn" data-hat="durag">DURAG</button>
           <button class="hat-btn" data-hat="cap">CAP</button>
           <button class="hat-btn" data-hat="hood">HOOD</button>
-          <button class="hat-btn" data-hat="none">NONE</button>
+          <button class="hat-btn" data-hat="beanie">BEANIE</button>
+          <button class="hat-btn" data-hat="bandana">BANDANA</button>
+          <button class="hat-btn" data-hat="headphones">CANS</button>
+          <button class="hat-btn" data-hat="mohawk">MOHAWK</button>
+          <button class="hat-btn" data-hat="none">BALD</button>
+        </div>
+      </div>
+
+      <div class="cust-row">
+        <label>SHADES</label>
+        <div class="swatches" id="shades-swatches">
+          <button class="hat-btn" data-shades="false">NAH</button>
+          <button class="hat-btn" data-shades="true">YEAH</button>
+        </div>
+      </div>
+
+      <div class="cust-row">
+        <label>VIBE</label>
+        <div class="swatches" id="pattern-swatches">
+          <button class="hat-btn" data-pattern="solid">SOLID</button>
+          <button class="hat-btn" data-pattern="stripe">STRIPE</button>
+          <button class="hat-btn" data-pattern="flame">FLAME</button>
+          <button class="hat-btn" data-pattern="glow">GLOW</button>
         </div>
       </div>
 
@@ -74,11 +99,13 @@
         <div class="swatches" id="chain-swatches">
           <button class="hat-btn" data-chain="gold">GOLD</button>
           <button class="hat-btn" data-chain="ice">ICE</button>
+          <button class="hat-btn" data-chain="platinum">PLAT</button>
           <button class="hat-btn" data-chain="none">NONE</button>
         </div>
       </div>
     </div>
 
+    <button id="randomize-btn" class="small-btn">🎲 RANDOMIZE</button>
     <button id="start-btn" class="big-btn">START GAME</button>
     <button id="howto-btn" class="small-btn">HOW TO PLAY</button>
   </div>
@@ -88,12 +115,15 @@
     <h2>HOW TO PLAY</h2>
     <div class="howto-content">
       <p><strong>GOAL:</strong> Keep the black Escalade alive. If the truck's health hits 0, it's over.</p>
-      <p><strong>DESKTOP:</strong> WASD or arrows to move. Mouse to aim. Left-click to shoot. 1-5 to switch weapons. SPACE to reload. SHIFT to dash.</p>
+      <p><strong>DESKTOP:</strong> WASD or arrows to move. Mouse to aim. Left-click to shoot. 1-5 or scroll wheel to switch weapons. SPACE to reload. SHIFT to dash.</p>
       <p><strong>iPHONE / TOUCH:</strong> Drag anywhere on the LEFT half of the screen to move — joystick follows your thumb. Fire button on the right; auto-aims at nearest enemy. Tap DASH to roll (invincible while dashing). Tap weapon icons to swap.</p>
-      <p><strong>WEAPONS:</strong> Draco (rapid), Glock (semi-auto, fast reload), Boxing Gloves (melee, no ammo), RPG (explosive, slow), CRAB LASER (special - find it in waves).</p>
-      <p><strong>POWER-UPS:</strong> Drop from kills. Health (red cross), Speed (lightning), Damage (skull), Shield (blue), Ammo refill (yellow crate). Walk near them — they pull toward you.</p>
-      <p><strong>COMBO:</strong> Quick consecutive kills build a multiplier (up to ×5). Don't take damage or it resets!</p>
-      <p><strong>BOSSES:</strong> Wave 5 = Giant Crab. Wave 10 = 2Slimey. Wave 15 = Mirror 2X. Beat all three to win, then it loops endless.</p>
+      <p><strong>WEAPONS:</strong> Draco (rapid), Glock (semi-auto, fast reload), Boxing Gloves (melee, no ammo), RPG (explosive, slow), CRAB LASER (special - find it in wave 6+).</p>
+      <p><strong>POWER-UPS:</strong> Drop from kills. Health (red cross), Speed (lightning), Damage (skull), Shield (blue), Ammo refill (yellow crate). They magnet to you when close.</p>
+      <p><strong>CASH:</strong> Every kill drops coins. Pick them up — they magnet too. Each coin = +5 score.</p>
+      <p><strong>COMBOS:</strong> Quick consecutive kills build a multiplier (up to ×5). Don't take damage or it resets!</p>
+      <p><strong>MULTI-KILLS:</strong> Kills within 600ms cluster — DOUBLE / TRIPLE / MEGA / MASSACRE.</p>
+      <p><strong>PERFECT WAVE:</strong> Clear a wave without taking damage for a bonus.</p>
+      <p><strong>BOSSES:</strong> Wave 5 = Giant Crab. Wave 10 = 2Slimey. Wave 15 = Mirror 2X. Beat all three to win.</p>
     </div>
     <button id="howto-back" class="big-btn">BACK</button>
   </div>
@@ -102,7 +132,6 @@
   <div id="game-screen" class="screen hidden">
     <canvas id="game-canvas"></canvas>
 
-    <!-- HUD overlay -->
     <div id="hud">
       <div class="hud-row">
         <div class="hud-bar">
@@ -116,12 +145,12 @@
       </div>
       <div class="hud-row">
         <div class="hud-stat" id="hud-wave">WAVE 1</div>
-        <div class="hud-stat" id="hud-score">SCORE 0</div>
+        <div class="hud-stat" id="hud-score">0</div>
+        <div class="hud-stat hud-cash" id="hud-cash">$0</div>
         <div class="hud-stat" id="hud-ammo">AMMO --</div>
       </div>
     </div>
 
-    <!-- Weapon switcher -->
     <div id="weapon-bar">
       <button class="weapon-slot" data-weapon="0">DRACO</button>
       <button class="weapon-slot" data-weapon="1">GLOCK</button>
@@ -130,7 +159,6 @@
       <button class="weapon-slot locked" data-weapon="4">CRAB</button>
     </div>
 
-    <!-- Touch controls (hidden on desktop via CSS) -->
     <div id="touch-controls">
       <div id="joystick">
         <div id="joystick-stick"></div>
@@ -141,7 +169,6 @@
       </div>
     </div>
 
-    <!-- Pause / menu -->
     <button id="pause-btn" class="corner-btn">II</button>
   </div>
 
@@ -174,7 +201,7 @@
     <h2 id="banner-text">WAVE 1</h2>
   </div>
 
-  <!-- All game audio - tracks load from /music/ folder -->
+  <!-- Audio tracks -->
   <audio id="music-menu"     src="music/menu.mp3"    loop preload="auto"></audio>
   <audio id="music-gameplay" src="music/gameplay.mp3" loop preload="auto"></audio>
   <audio id="music-boss"     src="music/boss.mp3"    loop preload="auto"></audio>
@@ -188,11 +215,10 @@
   <script src="js/waves.js"></script>
   <script src="js/game.js"></script>
 
-  <!-- PWA service worker registration -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('service-worker.js').catch(console.warn);
+        navigator.serviceWorker.register('service-worker.js').catch(() => {});
       });
     }
   </script>

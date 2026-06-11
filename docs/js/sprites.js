@@ -1,9 +1,10 @@
-// sprites.js — all pixel art drawn procedurally on canvas.
-// No image files needed; everything is rectangles on a pixel grid.
+// sprites.js — all pixel art drawn procedurally. No image files needed.
+// MAJOR UPDATE: many more outfit options (hats, shades, patterns), plus cash sprite,
+// plus all the boss/enemy hurt-flash support.
 
 const Sprites = (() => {
+
   // Helper: draw a pixel-art "sprite" from a 2D color grid
-  // grid is array of strings, each char maps to a color in palette
   function drawGrid(ctx, x, y, grid, palette, pixelSize = 2) {
     for (let row = 0; row < grid.length; row++) {
       const line = grid[row];
@@ -22,66 +23,199 @@ const Sprites = (() => {
     }
   }
 
-  // === PLAYER 2X ===
-  // Customizable: fit color, accent, hat, chain
+  // ============ COLOR UTILITIES ============
+  function hexToRgb(hex) {
+    if (!hex || typeof hex !== 'string') return { r: 200, g: 0, b: 0 };
+    const m = hex.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+    if (!m) return { r: 200, g: 0, b: 0 };
+    return { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) };
+  }
+  function darkenHex(hex, factor) {
+    const c = hexToRgb(hex);
+    return `rgb(${Math.floor(c.r * factor)}, ${Math.floor(c.g * factor)}, ${Math.floor(c.b * factor)})`;
+  }
+  function lightenHex(hex, factor) {
+    const c = hexToRgb(hex);
+    return `rgb(${Math.min(255, Math.floor(c.r + (255 - c.r) * factor))}, ${Math.min(255, Math.floor(c.g + (255 - c.g) * factor))}, ${Math.min(255, Math.floor(c.b + (255 - c.b) * factor))})`;
+  }
+
+  // ============ PLAYER 2X ============
+  // Customizable: fit color, accent, hat, chain, shades, pattern
   function drawPlayer(ctx, x, y, opts = {}, dir = 0, frame = 0) {
     const fit    = opts.fit    || '#00ff66';
     const accent = opts.accent || '#cc0022';
     const hat    = opts.hat    || 'durag';
     const chain  = opts.chain  || 'gold';
+    const shades = !!opts.shades;
+    const pattern = opts.pattern || 'solid';
     const skin   = '#5a3a22';
     const skinD  = '#3d2615';
     const eye    = '#fff';
-    const shoe   = '#111';
 
-    // Hat color depends on type
-    let hatChar = ' ';
+    // Pattern variants tweak the fit accent
+    let fitB = fit;
+    if (pattern === 'glow') {
+      // Add an outer glow ring before sprite renders
+      ctx.fillStyle = `rgba(${hexToRgb(fit).r}, ${hexToRgb(fit).g}, ${hexToRgb(fit).b}, 0.18)`;
+      ctx.beginPath(); ctx.arc(x, y + 2, 22, 0, Math.PI * 2); ctx.fill();
+    } else if (pattern === 'stripe') {
+      // accented stripe is just brighter color
+      fitB = lightenHex(fit, 0.2);
+    } else if (pattern === 'flame') {
+      // Flame pattern: yellow→orange→fit-color gradient on the body
+    }
+
+    // Hat character/color
     let hatColor = '#000';
-    if (hat === 'durag') { hatColor = accent; hatChar = 'H'; }
-    else if (hat === 'cap') { hatColor = fit; hatChar = 'H'; }
-    else if (hat === 'hood') { hatColor = '#222'; hatChar = 'H'; }
+    let hatGrid = null;
+    if (hat === 'durag') { hatColor = accent; }
+    else if (hat === 'cap') { hatColor = fit; }
+    else if (hat === 'hood') { hatColor = '#222'; }
+    else if (hat === 'beanie') { hatColor = accent; }
+    else if (hat === 'bandana') { hatColor = accent; }
+    else if (hat === 'headphones') { hatColor = '#222'; }
+    else if (hat === 'mohawk') { hatColor = accent; }
 
-    const chainColor = chain === 'gold' ? '#ffcc00' : (chain === 'ice' ? '#aaeeff' : null);
+    const chainColor = chain === 'gold' ? '#ffcc00'
+                     : chain === 'ice' ? '#aaeeff'
+                     : chain === 'platinum' ? '#cccccc'
+                     : null;
 
-    // Walking bob
-    const bob = frame % 2 === 0 ? 0 : -1;
-    // Direction mirror (0=right, 1=left, 2=down, 3=up)
-    const mirror = dir === 1;
+    // Base body grid (head + torso + legs)
+    // Head/face rows 0-5, torso rows 6-11, legs/shoes rows 12-17.
+    // Hat rows 0-2 (varies by hat type), body uses fit color F & accent A, chain C
+    let topRows;
+    let shadeRows;
 
-    // 14 wide x 18 tall sprite
-    const grid = [
-      '   HHHHHHHH   ',
-      '  HHHHHHHHHH  ',
-      '  HSSSSSSSSH  ',
-      '  HSEESSEESH  ', // eyes
+    // Build face rows depending on shades
+    if (shades) {
+      topRows = [
+        '  HSSSSSSSSH  ',
+        '  HSGGGGGGSH  ', // shades band
+        '  HSGGGGGGSH  ',
+      ];
+    } else {
+      topRows = [
+        '  HSSSSSSSSH  ',
+        '  HSEESSEESH  ', // eyes
+        '  HSSSSSSSSH  ',
+      ];
+    }
+    shadeRows = [
       '  HSSSSMSSSH  ', // mouth dot
       '  HSSSSSSSSH  ',
+    ];
+
+    // Hat rows (3 rows above head)
+    let hatRows;
+    switch (hat) {
+      case 'cap':
+        hatRows = [
+          '   HHHHHHHH   ',
+          '  HHHHHHHHHH  ',
+          '  HHHHHHHHH   ',
+        ];
+        break;
+      case 'hood':
+        hatRows = [
+          '  HHHHHHHHHH  ',
+          ' HHHHHHHHHHHH ',
+          ' HHHHHHHHHHHH ',
+        ];
+        // Hood extends down sides — add side flaps later
+        break;
+      case 'beanie':
+        hatRows = [
+          '    HHHHHH    ',
+          '   HHHHHHHH   ',
+          '  HHHHHHHHHH  ',
+        ];
+        break;
+      case 'bandana':
+        hatRows = [
+          '              ',
+          '              ',
+          '  HHHHHHHHHH  ',
+        ];
+        break;
+      case 'headphones':
+        hatRows = [
+          '   HHHHHHHH   ',
+          '  H        H  ',
+          '  H        H  ',
+        ];
+        break;
+      case 'mohawk':
+        hatRows = [
+          '      HH      ',
+          '     HHHH     ',
+          '    HHHHHH    ',
+        ];
+        break;
+      case 'none':
+        hatRows = [
+          '              ',
+          '              ',
+          '              ',
+        ];
+        break;
+      case 'durag':
+      default:
+        hatRows = [
+          '   HHHHHHHH   ',
+          '  HHHHHHHHHH  ',
+          '  HHHHHHHHHH  ', // durag trailing flap covers more
+        ];
+        break;
+    }
+
+    // Torso rows — chain on row 8
+    const torsoRows = [
       '   FFFFFFFF   ',
-      '  FFAFFFFAFF  ', // accent stripes
+      '  FFAFFFFAFF  ',
       '  FFFCCCCFFF  ', // chain
       '  FFFFFFFFFF  ',
       '  FFFFFFFFFF  ',
       '  FFAAFFAAFF  ',
-      '   FF    FF   ',
-      '   FF    FF   ',
-      '   FF    FF   ',
-      '   PP    PP   ', // pants
-      '   PP    PP   ',
-      '  SSSS  SSSS  ', // shoes
     ];
+
+    // Pattern overrides for stripe/flame
+    if (pattern === 'stripe') {
+      torsoRows[3] = '  FFAAAAAAFF  ';
+      torsoRows[4] = '  FFFFFFFFFF  ';
+    } else if (pattern === 'flame') {
+      torsoRows[3] = '  FFXXXXXXFF  ';
+      torsoRows[4] = '  FFFYYYYFFF  ';
+    }
+
+    const legsRows = [
+      '   FF    FF   ',
+      '   FF    FF   ',
+      '   FF    FF   ',
+      '   PP    PP   ',
+      '   PP    PP   ',
+      '  SSSS  SSSS  ',
+    ];
+
+    const grid = [...hatRows, ...topRows, ...shadeRows, ...torsoRows, ...legsRows];
 
     const palette = {
       H: hatColor,
       S: skin,
       E: eye,
+      G: shades ? '#111' : skin,  // shades band color
       M: skinD,
       F: fit,
       A: accent,
+      X: '#ff6600',  // flame mid
+      Y: '#ffcc00',  // flame highlight
       C: chainColor || fit,
       P: '#222',
     };
 
-    // Bob the whole sprite
+    // Walking bob
+    const bob = frame % 2 === 0 ? 0 : -1;
+    const mirror = dir === 1;
     const yOff = bob;
 
     if (mirror) {
@@ -94,6 +228,24 @@ const Sprites = (() => {
       drawGrid(ctx, x, y + yOff, grid, palette, 2);
     }
 
+    // Shades highlight (reflective glint)
+    if (shades && !mirror) {
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(Math.floor(x - 7), Math.floor(y + yOff - 8), 2, 1);
+    }
+
+    // Headphones earcups (drawn on sides since the front grid can't easily express them)
+    if (hat === 'headphones') {
+      ctx.fillStyle = '#cc0022';
+      ctx.fillRect(Math.floor(x - 11), Math.floor(y + yOff - 6), 3, 4);
+      ctx.fillRect(Math.floor(x + 8), Math.floor(y + yOff - 6), 3, 4);
+    }
+    // Bandana side flap
+    if (hat === 'bandana') {
+      ctx.fillStyle = hatColor;
+      ctx.fillRect(Math.floor(x + 7), Math.floor(y + yOff - 4), 4, 6);
+    }
+
     // Shadow ellipse under feet
     ctx.fillStyle = 'rgba(0,0,0,0.4)';
     ctx.beginPath();
@@ -101,12 +253,10 @@ const Sprites = (() => {
     ctx.fill();
   }
 
-  // === CRAB ENEMY ===
-  // scale: visual size multiplier (1=normal); tintShell: override shell color for variants
+  // ============ CRAB ENEMY ============
   function drawCrab(ctx, x, y, frame = 0, hp = 1, hurtFlash = false, scale = 1, tintShell = null) {
     const wobble = Math.sin(frame * 0.3) * 1;
     const shellR = tintShell || '#cc0022';
-    // Compute darker shade
     const shellD = darkenHex(shellR, 0.5);
     const palette = {
       R: shellR,
@@ -127,29 +277,13 @@ const Sprites = (() => {
     ];
     drawGrid(ctx, x, y + wobble, grid, palette, Math.max(1, Math.round(2 * scale)));
 
-    // Hurt flash — bright white overlay during hit window
     if (hurtFlash) {
       ctx.fillStyle = 'rgba(255,255,255,0.55)';
       ctx.fillRect(x - 14 * scale, y + wobble - 10 * scale, 28 * scale, 20 * scale);
     }
   }
 
-  // Helpers for variant tinting
-  function darkenHex(hex, factor) {
-    const c = hexToRgb(hex);
-    return `rgb(${Math.floor(c.r * factor)}, ${Math.floor(c.g * factor)}, ${Math.floor(c.b * factor)})`;
-  }
-  function lightenHex(hex, factor) {
-    const c = hexToRgb(hex);
-    return `rgb(${Math.min(255, Math.floor(c.r + (255 - c.r) * factor))}, ${Math.min(255, Math.floor(c.g + (255 - c.g) * factor))}, ${Math.min(255, Math.floor(c.b + (255 - c.b) * factor))})`;
-  }
-  function hexToRgb(hex) {
-    const m = hex.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
-    if (!m) return { r: 200, g: 0, b: 0 };
-    return { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) };
-  }
-
-  // === PAPARAZZI ENEMY ===
+  // ============ PAPARAZZI ENEMY ============
   function drawPaparazzi(ctx, x, y, frame = 0, hurtFlash = false) {
     const flash = (frame % 30) < 3;
     const palette = {
@@ -189,51 +323,37 @@ const Sprites = (() => {
     }
   }
 
-  // === ESCALADE TRUCK (the thing you protect) ===
+  // ============ ESCALADE TRUCK ============
   function drawTruck(ctx, x, y, hpPct = 1) {
-    // 60 wide x 36 tall
     const w = 60, h = 30;
-    // Damage overlay
     const damaged = hpPct < 0.5;
     const burning = hpPct < 0.25;
 
-    // Body
     ctx.fillStyle = '#0a0a0a';
     ctx.fillRect(x - w/2, y - h/2, w, h);
-    // Top
     ctx.fillStyle = '#1a1a1a';
     ctx.fillRect(x - w/2 + 4, y - h/2 - 8, w - 8, 10);
-    // Windows
     ctx.fillStyle = damaged ? '#330000' : '#1a3a4a';
     ctx.fillRect(x - w/2 + 6, y - h/2 - 6, 14, 8);
     ctx.fillRect(x - w/2 + 24, y - h/2 - 6, 14, 8);
     ctx.fillRect(x - w/2 + 42, y - h/2 - 6, 12, 8);
-    // Window frames
     ctx.fillStyle = '#000';
     ctx.fillRect(x - w/2 + 20, y - h/2 - 8, 2, 10);
     ctx.fillRect(x - w/2 + 38, y - h/2 - 8, 2, 10);
-
-    // Grille
     ctx.fillStyle = '#444';
     ctx.fillRect(x + w/2 - 4, y - 4, 4, 8);
-    // Headlights
     ctx.fillStyle = '#ffee88';
     ctx.fillRect(x + w/2 - 2, y - 8, 3, 3);
     ctx.fillRect(x + w/2 - 2, y + 5, 3, 3);
-
-    // Wheels
     ctx.fillStyle = '#222';
     ctx.beginPath(); ctx.arc(x - w/2 + 10, y + h/2, 7, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(x + w/2 - 10, y + h/2, 7, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#555';
     ctx.beginPath(); ctx.arc(x - w/2 + 10, y + h/2, 3, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(x + w/2 - 10, y + h/2, 3, 0, Math.PI * 2); ctx.fill();
-
-    // Chrome trim
     ctx.fillStyle = damaged ? '#664400' : '#888';
     ctx.fillRect(x - w/2, y + h/2 - 4, w, 2);
 
-    // Damage smoke
     if (damaged) {
       for (let i = 0; i < 3; i++) {
         const sx = x - w/2 + Math.random() * w;
@@ -252,7 +372,7 @@ const Sprites = (() => {
     }
   }
 
-  // === BOSSES ===
+  // ============ BOSSES ============
   function drawGiantCrab(ctx, x, y, frame = 0, hpPct = 1, hurtFlash = false) {
     const wobble = Math.sin(frame * 0.15) * 3;
     const scale = 5;
@@ -288,19 +408,18 @@ const Sprites = (() => {
     }
   }
 
-  // 2Slimey boss — rival rapper character
   function drawSlimey(ctx, x, y, frame = 0, hpPct = 1, hurtFlash = false) {
     const bob = Math.sin(frame * 0.2) * 2;
     const palette = {
-      S: '#6b4423', // skin
-      H: '#222',    // hair
-      G: '#00aa44', // green hoodie (slimey themed)
+      S: '#6b4423',
+      H: '#222',
+      G: '#00aa44',
       D: '#006622',
-      C: '#ffcc00', // gold chain
+      C: '#ffcc00',
       E: '#fff',
-      M: '#cc0000', // mouth
+      M: '#cc0000',
       P: '#000',
-      T: '#ff66cc', // grills (gold/pink mix)
+      T: '#ff66cc',
     };
     const grid = [
       '   HHHHHHHH   ',
@@ -322,7 +441,6 @@ const Sprites = (() => {
     ];
     drawGrid(ctx, x, y + bob, grid, palette, 4);
 
-    // Aura when low HP (rage mode)
     if (hpPct < 0.5) {
       ctx.strokeStyle = `rgba(0,255,68,${0.5 + Math.sin(frame * 0.4) * 0.3})`;
       ctx.lineWidth = 3;
@@ -334,28 +452,22 @@ const Sprites = (() => {
     }
   }
 
-  // Mirror 2X — final boss, looks like the player but dark
   function drawMirror2X(ctx, x, y, opts, frame = 0, hpPct = 1, hurtFlash = false) {
-    // Drawn at 4x scale, dark/inverted palette
     const dark = {
-      fit: opts.fit || '#00ff66',
-      accent: opts.accent || '#cc0022',
-      hat: opts.hat,
-      chain: opts.chain,
+      fit: opts?.fit || '#00ff66',
+      accent: opts?.accent || '#cc0022',
+      hat: opts?.hat,
+      chain: opts?.chain,
     };
-    // Glitch effect
     const glitch = Math.random() < 0.1;
     if (glitch) {
       ctx.save();
       ctx.translate(Math.random() * 4 - 2, Math.random() * 4 - 2);
     }
-    // Draw bigger
-    const oldGrid = drawPlayer;
-    // Use scale 4 instead of 2 — re-implement quickly
     const fit    = dark.fit;
     const accent = dark.accent;
-    const skin   = '#2a1a10'; // dark skin (shadow self)
-    const eye    = '#ff0000'; // red eyes
+    const skin   = '#2a1a10';
+    const eye    = '#ff0000';
     const hatColor = dark.hat === 'durag' ? accent : (dark.hat === 'cap' ? fit : '#000');
 
     const grid = [
@@ -387,7 +499,6 @@ const Sprites = (() => {
 
     if (glitch) ctx.restore();
 
-    // Dark aura
     ctx.strokeStyle = `rgba(255,0,0,${0.3 + Math.sin(frame * 0.3) * 0.2})`;
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(x, y, 50, 0, Math.PI * 2); ctx.stroke();
@@ -398,14 +509,13 @@ const Sprites = (() => {
     }
   }
 
-  // === BULLETS (uses bullet object with prevX/prevY for trail effects) ===
+  // ============ BULLETS ============
   function drawBullet(ctx, b) {
     const x = b.x, y = b.y, type = b.type;
     const px = b.prevX || x, py = b.prevY || y;
 
     switch (type) {
       case 'draco': {
-        // Trail line
         ctx.strokeStyle = 'rgba(255,170,0,0.4)';
         ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x, y); ctx.stroke();
@@ -422,11 +532,9 @@ const Sprites = (() => {
         break;
       }
       case 'rpg': {
-        // Smoke trail
         ctx.strokeStyle = 'rgba(160,160,160,0.5)';
         ctx.lineWidth = 3;
         ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x, y); ctx.stroke();
-        // Rocket body
         const ang = Math.atan2(b.vy, b.vx);
         ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
         ctx.fillStyle = '#888'; ctx.fillRect(-4, -2, 8, 4);
@@ -436,7 +544,6 @@ const Sprites = (() => {
         break;
       }
       case 'laser': {
-        // Magenta glow trail
         ctx.strokeStyle = 'rgba(255,0,255,0.5)';
         ctx.lineWidth = 5;
         ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x, y); ctx.stroke();
@@ -459,11 +566,10 @@ const Sprites = (() => {
     }
   }
 
-  // === POWER-UPS ===
+  // ============ POWER-UPS ============
   function drawPowerUp(ctx, x, y, type, frame = 0) {
     const bob = Math.sin(frame * 0.15) * 3;
     const ny = y + bob;
-    // Glow
     ctx.fillStyle = 'rgba(255,255,255,0.2)';
     ctx.beginPath(); ctx.arc(x, ny, 12, 0, Math.PI * 2); ctx.fill();
 
@@ -519,21 +625,43 @@ const Sprites = (() => {
         ctx.fillText('AMMO', x - 8, ny + 1);
         break;
       case 'crab-gun':
-        // The special weapon pickup
         ctx.fillStyle = '#ff00ff';
         ctx.fillRect(x - 8, ny - 3, 16, 6);
         ctx.fillStyle = '#fff';
         ctx.fillRect(x + 6, ny - 4, 4, 8);
         ctx.fillStyle = '#cc0022';
         ctx.fillRect(x - 10, ny - 2, 4, 4);
-        // sparkle
         ctx.fillStyle = '#fff';
         ctx.fillRect(x - 3, ny - 6 - Math.sin(frame * 0.3) * 2, 2, 2);
         break;
     }
   }
 
-  // === PARTICLES ===
+  // ============ CASH (coin) ============
+  function drawCash(ctx, x, y, frame = 0, lifePct = 1) {
+    const flip = Math.abs(Math.sin(frame * 0.12));
+    const w = Math.max(3, Math.round(8 * flip));
+    const alpha = lifePct < 0.2 ? lifePct / 0.2 : 1;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    // Outer ring
+    ctx.fillStyle = '#aa7700';
+    ctx.fillRect(x - w/2 - 1, y - 4, w + 2, 8);
+    // Inner glow
+    ctx.fillStyle = '#ffcc00';
+    ctx.fillRect(x - w/2, y - 3, w, 6);
+    // Highlight stripe
+    ctx.fillStyle = '#ffee88';
+    ctx.fillRect(x - w/2, y - 2, w, 2);
+    // Dollar sign (only visible at certain angles)
+    if (flip > 0.7) {
+      ctx.fillStyle = '#664400';
+      ctx.fillRect(x - 1, y - 2, 2, 4);
+    }
+    ctx.restore();
+  }
+
+  // ============ PARTICLES ============
   function drawParticle(ctx, p) {
     ctx.fillStyle = p.color;
     ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
@@ -541,7 +669,7 @@ const Sprites = (() => {
     ctx.globalAlpha = 1;
   }
 
-  // === MUZZLE FLASH ===
+  // ============ MUZZLE FLASH ============
   function drawMuzzleFlash(ctx, x, y, angle) {
     ctx.save();
     ctx.translate(x, y);
@@ -562,6 +690,6 @@ const Sprites = (() => {
   return {
     drawPlayer, drawCrab, drawPaparazzi, drawTruck,
     drawGiantCrab, drawSlimey, drawMirror2X,
-    drawBullet, drawPowerUp, drawParticle, drawMuzzleFlash,
+    drawBullet, drawPowerUp, drawCash, drawParticle, drawMuzzleFlash,
   };
 })();
