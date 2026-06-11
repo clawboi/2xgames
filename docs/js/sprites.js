@@ -102,14 +102,18 @@ const Sprites = (() => {
   }
 
   // === CRAB ENEMY ===
-  function drawCrab(ctx, x, y, frame = 0, hp = 1) {
+  // scale: visual size multiplier (1=normal); tintShell: override shell color for variants
+  function drawCrab(ctx, x, y, frame = 0, hp = 1, hurtFlash = false, scale = 1, tintShell = null) {
     const wobble = Math.sin(frame * 0.3) * 1;
+    const shellR = tintShell || '#cc0022';
+    // Compute darker shade
+    const shellD = darkenHex(shellR, 0.5);
     const palette = {
-      R: '#cc0022', // shell red
-      D: '#880011', // dark shell
-      E: '#fff',    // eye
-      B: '#000',    // outline
-      C: '#ff4444', // claw highlight
+      R: shellR,
+      D: shellD,
+      E: '#fff',
+      B: '#000',
+      C: lightenHex(shellR, 0.25),
     };
     const grid = [
       '  B      B  ',
@@ -121,25 +125,40 @@ const Sprites = (() => {
       'CRRRRRRRRRRC',
       ' B B B B B B',
     ];
-    drawGrid(ctx, x, y + wobble, grid, palette, 2);
+    drawGrid(ctx, x, y + wobble, grid, palette, Math.max(1, Math.round(2 * scale)));
 
-    // Health-tinged overlay for hurt crabs
-    if (hp < 1) {
-      ctx.fillStyle = `rgba(255,255,255,${0.3 * (1 - hp)})`;
-      ctx.fillRect(x - 12, y + wobble - 8, 24, 16);
+    // Hurt flash — bright white overlay during hit window
+    if (hurtFlash) {
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.fillRect(x - 14 * scale, y + wobble - 10 * scale, 28 * scale, 20 * scale);
     }
   }
 
+  // Helpers for variant tinting
+  function darkenHex(hex, factor) {
+    const c = hexToRgb(hex);
+    return `rgb(${Math.floor(c.r * factor)}, ${Math.floor(c.g * factor)}, ${Math.floor(c.b * factor)})`;
+  }
+  function lightenHex(hex, factor) {
+    const c = hexToRgb(hex);
+    return `rgb(${Math.min(255, Math.floor(c.r + (255 - c.r) * factor))}, ${Math.min(255, Math.floor(c.g + (255 - c.g) * factor))}, ${Math.min(255, Math.floor(c.b + (255 - c.b) * factor))})`;
+  }
+  function hexToRgb(hex) {
+    const m = hex.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+    if (!m) return { r: 200, g: 0, b: 0 };
+    return { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) };
+  }
+
   // === PAPARAZZI ENEMY ===
-  function drawPaparazzi(ctx, x, y, frame = 0) {
-    const flash = (frame % 30) < 3; // camera flash every 30 frames
+  function drawPaparazzi(ctx, x, y, frame = 0, hurtFlash = false) {
+    const flash = (frame % 30) < 3;
     const palette = {
-      S: '#d4a574', // skin
-      H: '#222',    // hair
-      C: '#000',    // camera
-      L: flash ? '#ffffff' : '#444', // lens (flashing)
-      V: '#666',    // vest
-      P: '#1a1a1a', // pants
+      S: '#d4a574',
+      H: '#222',
+      C: '#000',
+      L: flash ? '#ffffff' : '#444',
+      V: '#666',
+      P: '#1a1a1a',
     };
     const grid = [
       '   HHHHH   ',
@@ -158,12 +177,15 @@ const Sprites = (() => {
     ];
     drawGrid(ctx, x, y, grid, palette, 2);
 
-    // Flash burst
     if (flash) {
       ctx.fillStyle = 'rgba(255,255,255,0.6)';
       ctx.beginPath();
       ctx.arc(x, y - 4, 16, 0, Math.PI * 2);
       ctx.fill();
+    }
+    if (hurtFlash) {
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.fillRect(x - 14, y - 14, 28, 28);
     }
   }
 
@@ -231,7 +253,7 @@ const Sprites = (() => {
   }
 
   // === BOSSES ===
-  function drawGiantCrab(ctx, x, y, frame = 0, hpPct = 1) {
+  function drawGiantCrab(ctx, x, y, frame = 0, hpPct = 1, hurtFlash = false) {
     const wobble = Math.sin(frame * 0.15) * 3;
     const scale = 5;
     const palette = {
@@ -252,7 +274,6 @@ const Sprites = (() => {
     ];
     drawGrid(ctx, x, y + wobble, grid, palette, scale);
 
-    // HP-based damage cracks
     if (hpPct < 0.5) {
       ctx.strokeStyle = '#330000';
       ctx.lineWidth = 2;
@@ -261,10 +282,14 @@ const Sprites = (() => {
       ctx.moveTo(x + 5, y - 15); ctx.lineTo(x - 15, y + 15);
       ctx.stroke();
     }
+    if (hurtFlash) {
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.fillRect(x - 48, y + wobble - 28, 96, 60);
+    }
   }
 
   // 2Slimey boss — rival rapper character
-  function drawSlimey(ctx, x, y, frame = 0, hpPct = 1) {
+  function drawSlimey(ctx, x, y, frame = 0, hpPct = 1, hurtFlash = false) {
     const bob = Math.sin(frame * 0.2) * 2;
     const palette = {
       S: '#6b4423', // skin
@@ -303,10 +328,14 @@ const Sprites = (() => {
       ctx.lineWidth = 3;
       ctx.beginPath(); ctx.arc(x, y, 60, 0, Math.PI * 2); ctx.stroke();
     }
+    if (hurtFlash) {
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      ctx.fillRect(x - 36, y + bob - 36, 72, 80);
+    }
   }
 
   // Mirror 2X — final boss, looks like the player but dark
-  function drawMirror2X(ctx, x, y, opts, frame = 0, hpPct = 1) {
+  function drawMirror2X(ctx, x, y, opts, frame = 0, hpPct = 1, hurtFlash = false) {
     // Drawn at 4x scale, dark/inverted palette
     const dark = {
       fit: opts.fit || '#00ff66',
@@ -362,40 +391,68 @@ const Sprites = (() => {
     ctx.strokeStyle = `rgba(255,0,0,${0.3 + Math.sin(frame * 0.3) * 0.2})`;
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(x, y, 50, 0, Math.PI * 2); ctx.stroke();
+
+    if (hurtFlash) {
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      ctx.fillRect(x - 32, y - 40, 64, 80);
+    }
   }
 
-  // === BULLETS ===
-  function drawBullet(ctx, x, y, type) {
+  // === BULLETS (uses bullet object with prevX/prevY for trail effects) ===
+  function drawBullet(ctx, b) {
+    const x = b.x, y = b.y, type = b.type;
+    const px = b.prevX || x, py = b.prevY || y;
+
     switch (type) {
-      case 'draco':
+      case 'draco': {
+        // Trail line
+        ctx.strokeStyle = 'rgba(255,170,0,0.4)';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x, y); ctx.stroke();
         ctx.fillStyle = '#ffaa00';
         ctx.fillRect(x - 2, y - 1, 6, 2);
         break;
-      case 'glock':
+      }
+      case 'glock': {
+        ctx.strokeStyle = 'rgba(255,238,136,0.3)';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x, y); ctx.stroke();
         ctx.fillStyle = '#ffee88';
-        ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.fill();
         break;
-      case 'rpg':
-        ctx.fillStyle = '#888';
-        ctx.fillRect(x - 4, y - 2, 8, 4);
-        ctx.fillStyle = '#ff4400';
-        ctx.fillRect(x - 6, y - 1, 3, 2);
+      }
+      case 'rpg': {
+        // Smoke trail
+        ctx.strokeStyle = 'rgba(160,160,160,0.5)';
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x, y); ctx.stroke();
+        // Rocket body
+        const ang = Math.atan2(b.vy, b.vx);
+        ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+        ctx.fillStyle = '#888'; ctx.fillRect(-4, -2, 8, 4);
+        ctx.fillStyle = '#ff4400'; ctx.fillRect(-6, -1, 3, 2);
+        ctx.fillStyle = '#ffaa00'; ctx.fillRect(-9, -1, 3, 2);
+        ctx.restore();
         break;
-      case 'punch':
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 14px monospace';
-        ctx.fillText('POW', x - 12, y + 4);
-        break;
-      case 'laser':
+      }
+      case 'laser': {
+        // Magenta glow trail
+        ctx.strokeStyle = 'rgba(255,0,255,0.5)';
+        ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x, y); ctx.stroke();
         ctx.fillStyle = '#ff00ff';
         ctx.fillRect(x - 6, y - 2, 12, 4);
         ctx.fillStyle = '#fff';
         ctx.fillRect(x - 5, y - 1, 10, 2);
         break;
-      case 'enemy':
+      }
+      case 'enemy': {
+        ctx.fillStyle = 'rgba(255,68,68,0.4)';
+        ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = '#ff4444';
         ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
         break;
+      }
       default:
         ctx.fillStyle = '#fff';
         ctx.fillRect(x - 1, y - 1, 2, 2);
