@@ -149,7 +149,9 @@
       <p><strong>CASH:</strong> Drops from kills. Magnets to you. Carries between runs in your BANK. Spend in shop on weapon damage, truck HP, move speed, weapon unlocks.</p>
       <p><strong>WATCH OUT:</strong> Wave 8+ Crabs with guns. Wave 10+ Fans run at you for pics — SHOOT THEM AND YOUR GUN LOCKS FOR 5 SECONDS. Boss fights = no truck, you're in their world; dodge lightning shadows.</p>
       <p><strong>SUIT DUDE:</strong> When the Escalade's HP drops below half, a dude in shades pops out and starts firing at enemies.</p>
-      <p><strong>BOSSES:</strong> Wave 5 = Giant Crab (underwater). Wave 10 = 2Slimey (mosh pit, 2X on stage). Wave 15 = Mirror 2X (caged in).</p>
+      <p><strong>BOSSES:</strong> Wave 5 = Giant Crab (underwater). Wave 10 = 2Slimey (mosh pit, 2X on stage). Wave 15 = Mirror 2X (caged in). Lightning strikes during boss fights — watch for shadow telegraphs and step OUT.</p>
+      <p><strong>AFTER WAVE 15:</strong> Mirror 2X drops a CD. Pick it up → after-party. Drink (wavy vision), smoke (hazy slo-mo), bump into a girl dancer to take her home as your follower. Walk into the green EXIT door to continue into wave 16+.</p>
+      <p><strong>FOLLOWER:</strong> The girl you took from the party trails you through later waves. She's there for the vibes.</p>
     </div>
     <button id="howto-back" class="big-btn">BACK</button>
   </div>
@@ -215,6 +217,12 @@
         <label>VOLUME</label>
         <input type="range" id="volume-slider" min="0" max="100" value="45" />
       </div>
+      <div class="track-row hidden" id="track-row">
+        <label>TRACK</label>
+        <button class="track-btn" data-track="gameplay">GAMEPLAY</button>
+        <button class="track-btn" data-track="boss">BOSS</button>
+        <button class="track-btn" data-track="menu">MENU</button>
+      </div>
       <div class="audio-toggle">
         <label><input type="checkbox" id="music-toggle" checked /> MUSIC</label>
         <label><input type="checkbox" id="sfx-toggle" checked /> SFX</label>
@@ -241,6 +249,7 @@
   <audio id="music-menu"     src="music/menu.mp3"    loop preload="auto"></audio>
   <audio id="music-gameplay" src="music/gameplay.mp3" loop preload="auto"></audio>
   <audio id="music-boss"     src="music/boss.mp3"    loop preload="auto"></audio>
+  <audio id="music-party"    src="music/partysong.mp3" loop preload="metadata"></audio>
 
   <!-- Game scripts (order matters) -->
   <script src="js/audio.js"></script>

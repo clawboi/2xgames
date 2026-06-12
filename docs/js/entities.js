@@ -74,6 +74,13 @@ class Player {
     let speed = this.speed * this.speedMultiplier;
     if (this.dashTime > 0) speed *= 2.5;
     if (this.emoteEnd > now) speed *= 0; // can't move while emoting
+    if (game.drunkUntil && game.drunkUntil > now) {
+      // Drunk wobble
+      const wobble = Math.sin(now / 180) * 0.3;
+      move.x = move.x * (1 - Math.abs(wobble)) + wobble;
+      move.y = move.y * (1 - Math.abs(wobble)) + Math.cos(now / 180) * 0.2;
+      speed *= 0.75;
+    }
 
     this.vx = move.x * speed;
     this.vy = move.y * speed;
@@ -104,7 +111,15 @@ class Player {
     // Aiming
     if (Input.isTouchDevice()) {
       const nearest = game.findNearestEnemy(this.x, this.y);
-      if (nearest) this.facing = Math.atan2(nearest.y - this.y, nearest.x - this.x);
+      if (nearest) {
+        // Lerp toward target angle so aim feels fluid not snappy
+        const targetAng = Math.atan2(nearest.y - this.y, nearest.x - this.x);
+        // Shortest-arc lerp
+        let diff = targetAng - this.facing;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        this.facing += diff * 0.18;
+      }
     } else {
       const m = Input.getMouseTarget();
       this.facing = Math.atan2(m.y - this.y, m.x - this.x);
@@ -373,23 +388,30 @@ class Truck {
   }
   // Called from game.js update when truck is taking heat
   trySuitDude(game) {
-    const lowHp = this.hp / this.maxHp < 0.5;
+    const lowHp = this.hp / this.maxHp < 0.6;
     if (!lowHp) return;
-    // Pop out occasionally — cooldown
-    if (this.suitDude.popUntil > performance.now()) return;
-    if (Math.random() < 0.005) {
-      this.suitDude.popUntil = performance.now() + 5000;
-      this.suitOutTime = 5000;
+    if (this.suitDude.popUntil > performance.now()) {
+      // Currently popped — track nearest enemy
+      const target = game.findNearestEnemy(this.x, this.y);
+      if (target) this.suitDude.angle = Math.atan2(target.y - this.y - 14, target.x - this.x - 4);
+    } else {
+      // 2% chance per frame to pop while truck is damaged
+      if (Math.random() < 0.02) {
+        this.suitDude.popUntil = performance.now() + 6000;
+        this.suitOutTime = 6000;
+        try { Audio.sfx.combo(); } catch (e) {}
+        if (game.spawnFloater) game.spawnFloater(this.x, this.y - 30, 'SUIT UP', '#fff', 12, -0.6);
+      }
     }
     if (this.suitOutTime > 0 && this.suitDude.fireCooldown <= 0) {
       const target = game.findNearestEnemy(this.x, this.y);
       if (target) {
         const ang = Math.atan2(target.y - this.y, target.x - this.x);
-        game.bullets.push(new Bullet(this.x, this.y - 8,
+        game.bullets.push(new Bullet(this.x + 4, this.y - 14,
           Math.cos(ang) * 11, Math.sin(ang) * 11,
-          30, 'glock', 'player', {}));
+          35, 'glock', 'player', {}));
         try { Audio.sfx.shoot(); } catch (e) {}
-        this.suitDude.fireCooldown = 400;
+        this.suitDude.fireCooldown = 350;
       }
     }
   }
@@ -544,7 +566,7 @@ class Enemy {
 // ===== CRAB (standard) =====
 class Crab extends Enemy {
   constructor(x, y, mod = 1) {
-    super(x, y, { hp: 30 * mod, speed: 1.0, damage: 8, radius: 12, score: 10 });
+    super(x, y, { hp: 55 * mod, speed: 1.0, damage: 8, radius: 12, score: 10 });
     this.frame = Math.floor(Math.random() * 100);
   }
   update(dt, game) {
@@ -567,7 +589,7 @@ class Crab extends Enemy {
 // ===== FAST CRAB =====
 class FastCrab extends Enemy {
   constructor(x, y, mod = 1) {
-    super(x, y, { hp: 18 * mod, speed: 2.1, damage: 5, radius: 10, score: 15 });
+    super(x, y, { hp: 32 * mod, speed: 2.1, damage: 5, radius: 10, score: 15 });
     this.frame = Math.floor(Math.random() * 100);
     this.scale = 0.75;
   }
@@ -598,7 +620,7 @@ class FastCrab extends Enemy {
 // ===== TANK CRAB =====
 class TankCrab extends Enemy {
   constructor(x, y, mod = 1) {
-    super(x, y, { hp: 90 * mod, speed: 0.7, damage: 14, radius: 18, score: 30 });
+    super(x, y, { hp: 160 * mod, speed: 0.7, damage: 14, radius: 18, score: 30 });
     this.frame = Math.floor(Math.random() * 100);
     this.scale = 1.5;
   }
@@ -622,7 +644,7 @@ class TankCrab extends Enemy {
 // ===== EXPLODER CRAB =====
 class ExploderCrab extends Enemy {
   constructor(x, y, mod = 1) {
-    super(x, y, { hp: 22 * mod, speed: 1.5, damage: 15, radius: 11, score: 20 });
+    super(x, y, { hp: 38 * mod, speed: 1.5, damage: 15, radius: 11, score: 20 });
     this.frame = Math.floor(Math.random() * 100);
     this.pulseTimer = 0;
   }
@@ -673,7 +695,7 @@ class ExploderCrab extends Enemy {
 // ===== ARMED CRAB (wave 8+) — crab with gun on its back =====
 class ArmedCrab extends Enemy {
   constructor(x, y, mod = 1) {
-    super(x, y, { hp: 40 * mod, speed: 0.85, damage: 6, radius: 13, score: 25 });
+    super(x, y, { hp: 72 * mod, speed: 0.85, damage: 6, radius: 13, score: 25 });
     this.frame = Math.floor(Math.random() * 100);
     this.shootCooldown = 1500 + Math.random() * 1000;
     this.preferredRange = 220;
@@ -777,7 +799,7 @@ class Fan extends Enemy {
 // ===== GIANT CRAB BOSS =====
 class GiantCrab extends Enemy {
   constructor(x, y, hpMult = 1) {
-    super(x, y, { hp: 1400 * hpMult, speed: 0.6, damage: 22, radius: 50, score: 800 });
+    super(x, y, { hp: 1800 * hpMult, speed: 0.6, damage: 22, radius: 50, score: 800 });
     this.isBoss = true;
     this.name = 'GIANT CRAB';
     this.frame = 0;
@@ -811,7 +833,7 @@ class GiantCrab extends Enemy {
 // ===== 2SLIMEY BOSS =====
 class Slimey extends Enemy {
   constructor(x, y, hpMult = 1) {
-    super(x, y, { hp: 2200 * hpMult, speed: 0.9, damage: 18, radius: 32, score: 1500 });
+    super(x, y, { hp: 2800 * hpMult, speed: 0.9, damage: 18, radius: 32, score: 1500 });
     this.isBoss = true;
     this.name = '2SLIMEY';
     this.frame = 0;
@@ -861,7 +883,7 @@ class Slimey extends Enemy {
 // ===== MIRROR 2X BOSS =====
 class Mirror2X extends Enemy {
   constructor(x, y, customization, hpMult = 1) {
-    super(x, y, { hp: 3000 * hpMult, speed: 1.4, damage: 25, radius: 28, score: 3000 });
+    super(x, y, { hp: 4000 * hpMult, speed: 1.4, damage: 25, radius: 28, score: 3000 });
     this.isBoss = true;
     this.name = 'MIRROR 2X';
     this.cust = customization;
@@ -1056,4 +1078,121 @@ class Lightning {
       ctx.fill();
     }
   }
+}
+
+// ===== FOLLOWER (NPC fan who follows player after party) =====
+class Follower {
+  constructor(x, y, name = 'Fan') {
+    this.x = x; this.y = y;
+    this.vx = 0; this.vy = 0;
+    this.radius = 10;
+    this.name = name;
+    this.frame = 0;
+    this.dir = 0;
+    this.trailDelay = [];  // queue of past player positions
+    this.dead = false;
+  }
+  update(dt, game) {
+    this.frame++;
+    if (!game.player) return;
+    // Track positions of player with delay
+    this.trailDelay.push({ x: game.player.x, y: game.player.y });
+    if (this.trailDelay.length > 24) this.trailDelay.shift();
+    const target = this.trailDelay[0];
+    if (target) {
+      const dx = target.x - this.x, dy = target.y - this.y;
+      const d = Math.hypot(dx, dy);
+      if (d > 40) {
+        this.x += (dx / d) * 2.5;
+        this.y += (dy / d) * 2.5;
+        if (Math.abs(dx) > 0.1) this.dir = dx > 0 ? 1 : 0;
+      }
+    }
+  }
+  draw(ctx) { Sprites.drawFollower(ctx, this.x, this.y, this.frame, this.dir); }
+}
+
+// ===== DANCER NPC (in party scene) =====
+class Dancer {
+  constructor(x, y, color = '#ff66aa', kind = 'girl') {
+    this.x = x; this.y = y;
+    this.color = color;
+    this.kind = kind;  // 'girl' or 'dude'
+    this.frame = Math.floor(Math.random() * 100);
+    this.danceOffset = Math.random() * Math.PI * 2;
+    this.dead = false;
+    this.radius = 12;
+    this.recruitable = kind === 'girl';
+    this.recruited = false;
+  }
+  update(dt, game) {
+    this.frame++;
+    // Subtle position drift
+    this.x += Math.sin(this.frame / 30 + this.danceOffset) * 0.4;
+    // Recruit on proximity if girl and not already recruited
+    if (this.recruitable && !this.recruited && game.player) {
+      const d = Math.hypot(game.player.x - this.x, game.player.y - this.y);
+      if (d < this.radius + game.player.radius + 4) {
+        this.recruited = true;
+        game.recruitedDancer = this;
+        game.spawnFloater(this.x, this.y - 24, 'TAKING HER HOME', '#ff66ff', 14, -0.6);
+        try { Audio.sfx.pickup(); } catch (e) {}
+      }
+    }
+  }
+  draw(ctx) {
+    const bob = Math.sin(this.frame / 8 + this.danceOffset) * 3;
+    Sprites.drawDancer(ctx, this.x, this.y + bob, this.color, this.kind, this.frame);
+    if (this.recruitable && !this.recruited) {
+      // "Press to take" hint
+      ctx.fillStyle = '#ffcc00';
+      ctx.font = 'bold 9px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('TAP TO TAKE', this.x, this.y - 28);
+      ctx.textAlign = 'left';
+    }
+  }
+}
+
+// ===== PARTY PICKUPS (CD / Drink / Smoke / Exit Door) =====
+class PartyPickup {
+  constructor(x, y, type) {
+    this.x = x; this.y = y;
+    this.type = type;  // 'cd' | 'drink' | 'smoke' | 'exit'
+    this.dead = false;
+    this.life = type === 'cd' ? Infinity : Infinity;  // party pickups don't expire
+    this.frame = 0;
+    this.radius = 16;
+  }
+  update(dt, game) {
+    this.frame++;
+    const dx = game.player.x - this.x, dy = game.player.y - this.y;
+    const d = Math.hypot(dx, dy);
+    if (d < game.player.radius + this.radius) {
+      this.apply(game);
+      // CD and Exit consume; drink and smoke too. all one-shot.
+      this.dead = true;
+    }
+  }
+  apply(game) {
+    try { Audio.sfx.pickup(); } catch (e) {}
+    switch (this.type) {
+      case 'cd':
+        game.enterParty();
+        break;
+      case 'drink':
+        game.drunkUntil = performance.now() + 8000;
+        game.spawnFloater(this.x, this.y - 16, 'CHEERS', '#ffaa00', 14);
+        break;
+      case 'smoke':
+        game.smokeUntil = performance.now() + 6000;
+        game.slowMo(2500, 0.6);
+        game.spawnFloater(this.x, this.y - 16, 'HAZY', '#cc88ff', 14);
+        break;
+      case 'exit':
+        game.exitParty();
+        break;
+    }
+  }
+  draw(ctx) { Sprites.drawPartyPickup(ctx, this.x, this.y, this.type, this.frame); }
 }

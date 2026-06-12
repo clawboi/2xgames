@@ -7,9 +7,13 @@ const Waves = (() => {
     if (waveNum === 5)  return { type: 'boss', boss: 'giantCrab', hpMult: 1.0, minions: 4,  spawnInterval: 900,  arena: 'underwater' };
     if (waveNum === 10) return { type: 'boss', boss: 'slimey',    hpMult: 1.3, minions: 8,  spawnInterval: 800,  arena: 'moshpit' };
     if (waveNum === 15) return { type: 'boss', boss: 'mirror',    hpMult: 1.7, minions: 6,  spawnInterval: 1000, arena: 'cage' };
+    // Endless boss loops: every 5 waves after 15 = repeat bosses harder
+    if (waveNum === 20) return { type: 'boss', boss: 'giantCrab', hpMult: 2.0, minions: 8,  spawnInterval: 700,  arena: 'underwater' };
+    if (waveNum === 25) return { type: 'boss', boss: 'slimey',    hpMult: 2.4, minions: 12, spawnInterval: 600,  arena: 'moshpit' };
+    if (waveNum === 30) return { type: 'boss', boss: 'mirror',    hpMult: 3.0, minions: 10, spawnInterval: 700,  arena: 'cage' };
 
     // Normal wave: scale by wave number, capped to keep playable
-    const mod = Math.min(2.4, 1 + (waveNum - 1) * 0.10); // 10% HP per wave, max 240%
+    const mod = Math.min(2.8, 1 + (waveNum - 1) * 0.12); // 12% HP per wave, max 280%
     const total = Math.min(8 + waveNum * 2, 50);
 
     // Spawn probabilities — sum can be up to ~0.8, remainder = regular crabs

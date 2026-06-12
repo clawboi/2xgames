@@ -487,3 +487,26 @@ button { font-family: inherit; cursor: pointer; border: none; outline: none; }
   /* Stack title+button on left, customizer in middle */
   #start-screen { align-content: center; }
 }
+
+/* ============ TRACK SWITCHER ============ */
+.track-row {
+  display: flex; gap: 6px; align-items: center;
+  margin-top: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.track-row label {
+  font-size: 11px; color: #888; letter-spacing: 1px;
+  width: 100%; text-align: center;
+}
+.track-btn {
+  background: #1a1a1a; color: #fff;
+  border: 1px solid #ff0033;
+  padding: 4px 8px;
+  font-size: 9px; letter-spacing: 1px;
+  font-weight: bold;
+}
+.track-btn:active { background: #ff0033; color: #000; }
+
+/* ============ FOLLOWER STATUS ON HUD ============ */
+.hud-stat.hud-follower { color: #ff66aa; border-color: #ff66aa; }

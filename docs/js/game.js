@@ -46,6 +46,8 @@
     player: null, truck: null,
     enemies: [], bullets: [], powerUps: [], cash: [], particles: [],
     floaters: [], dust: [], bloodSplats: [], lightnings: [], sonicWaves: [],
+    partyPickups: [], dancers: [], follower: null,
+    drunkUntil: 0, smokeUntil: 0,
     wave: 0, score: 0, cashCollected: 0, waveKills: 0, waveDamageTaken: 0,
     spawnQueue: 0, spawnTimer: 0, waveActive: false, state: 'menu',
     world: { w: WORLD_W, h: WORLD_H },
@@ -157,6 +159,75 @@
     onPlayerDeath() { setGameOver(false); },
     onTruckDeath() { if (!this.arenaActive) setGameOver(false); },
     onVictory() { setGameOver(true); },
+    enterParty() {
+      this.state = 'party';
+      this.arenaActive = true;
+      this.arenaType = 'party';
+      this.enemies = [];
+      this.bullets = [];
+      // Dancers populate the floor
+      this.dancers = [];
+      const dudes = 6, girls = 4;
+      for (let i = 0; i < dudes; i++) {
+        const ang = (i / dudes) * Math.PI * 2;
+        const r = 140 + Math.random() * 60;
+        const colors = ['#cc0022','#003388','#226600','#cc6600','#660066','#444'];
+        this.dancers.push(new Dancer(WORLD_W/2 + Math.cos(ang) * r, WORLD_H/2 + Math.sin(ang) * r * 0.6, colors[i % colors.length], 'dude'));
+      }
+      for (let i = 0; i < girls; i++) {
+        const ang = (i / girls) * Math.PI * 2 + 0.3;
+        const r = 100 + Math.random() * 60;
+        const colors = ['#ff66aa','#ff0088','#ffaa00','#cc88ff'];
+        this.dancers.push(new Dancer(WORLD_W/2 + Math.cos(ang) * r, WORLD_H/2 + Math.sin(ang) * r * 0.6, colors[i % colors.length], 'girl'));
+      }
+      // Party pickups scattered
+      this.partyPickups = [
+        new PartyPickup(180, 200, 'drink'),
+        new PartyPickup(620, 200, 'drink'),
+        new PartyPickup(180, 440, 'smoke'),
+        new PartyPickup(620, 440, 'smoke'),
+        new PartyPickup(WORLD_W - 60, WORLD_H / 2, 'exit'),
+      ];
+      this.player.x = 80;
+      this.player.y = WORLD_H / 2;
+      this.spawnFloater(WORLD_W/2, 60, "AFTER PARTY", '#ff66ff', 30, -0.3);
+      try {
+        // Try to play partysong.mp3 if it exists, fallback to menu
+        const partyAudio = document.getElementById('music-party');
+        if (partyAudio) {
+          partyAudio.volume = 0;
+          partyAudio.loop = true;
+          const p = partyAudio.play();
+          if (p && p.catch) p.catch(() => Audio.playMusic('menu'));
+          let v = 0;
+          const fadeIn = setInterval(() => { v += 0.04; partyAudio.volume = Math.min(0.5, v); if (v >= 0.5) clearInterval(fadeIn); }, 80);
+        } else {
+          Audio.playMusic('menu');
+        }
+      } catch (e) { Audio.playMusic('menu'); }
+    },
+    exitParty() {
+      const partyAudio = document.getElementById('music-party');
+      if (partyAudio) { try { partyAudio.pause(); partyAudio.currentTime = 0; } catch (e) {} }
+      // If a girl was recruited, she becomes the follower
+      if (this.recruitedDancer) {
+        this.follower = new Follower(this.player.x - 20, this.player.y, 'Fan');
+      }
+      this.recruitedDancer = null;
+      this.dancers = [];
+      this.partyPickups = [];
+      this.arenaActive = false;
+      this.arenaType = null;
+      this.state = 'playing';
+      this.drunkUntil = 0;
+      this.smokeUntil = 0;
+      // Reset truck for post-party play if needed
+      if (this.truck.hp <= 0) {
+        this.truck.hp = this.truck.maxHp;
+      }
+      startWave(16);
+      Audio.playMusic('gameplay');
+    },
   };
 
   // ============ CANVAS RESIZE ============
@@ -310,7 +381,7 @@
   document.getElementById('howto-btn').addEventListener('click', () => { Audio.unlock(); showScreen('howto-screen'); });
   document.getElementById('howto-back').addEventListener('click', () => showScreen('start-screen'));
   document.getElementById('shop-btn').addEventListener('click', () => { Audio.unlock(); renderShop(); showScreen('shop-screen'); });
-  document.getElementById('shop-back').addEventListener('click', () => { showScreen('start-screen'); refreshHighScoreUI(); });
+  document.getElementById('shop-back').addEventListener('click', () => { showScreen('start-screen'); refreshHighScoreUI(); refreshTrackRowVisibility(); });
   document.getElementById('scores-btn').addEventListener('click', () => { Audio.unlock(); renderScores(); showScreen('scores-screen'); });
   document.getElementById('scores-back').addEventListener('click', () => showScreen('start-screen'));
 
@@ -321,6 +392,7 @@
     { key: 'moveSpeed', kind: 'upgrade', name: 'Move Speed', desc: '+10% per level', cost: l => 250 + l*250, max: 3 },
     { key: 'shotgun', kind: 'unlock', name: 'SAWED-OFF', desc: '6-pellet spread, devastating up close', cost: 600 },
     { key: 'stungun', kind: 'unlock', name: 'STUN GUN', desc: 'Sonic scream, AOE + slows', cost: 800 },
+    { key: 'extraTracks', kind: 'unlock', name: 'EXTRA TRACKS', desc: 'Adds boss + menu to in-game playlist', cost: 400 },
   ];
   function renderShop() {
     const wrap = document.getElementById('shop-items'); wrap.innerHTML = '';
@@ -397,6 +469,8 @@
     Object.assign(game, {
       enemies: [], bullets: [], powerUps: [], cash: [], particles: [],
       floaters: [], dust: [], bloodSplats: [], lightnings: [], sonicWaves: [],
+      partyPickups: [], dancers: [], follower: null, recruitedDancer: null,
+      drunkUntil: 0, smokeUntil: 0,
       wave: 0, score: 0, cashCollected: 0, waveKills: 0, waveDamageTaken: 0,
       spawnQueue: 0, spawnTimer: 0, waveActive: false, bossActive: false,
       arenaActive: false, arenaType: null, crabGunSpawned: false,
@@ -510,14 +584,18 @@
         try { Audio.sfx.combo(); } catch (e) {}
       }
       if (game.arenaActive) { game.arenaActive = false; game.arenaType = null; }
-      const nextWave = game.wave + 1;
-      if (nextWave > 15 && game.wave === 15) {
+      // After wave 15 (Mirror 2X dies), drop the CD and enter party phase before continuing
+      if (game.wave === 15 && !save.bossesBeaten.includes('mirror_partied')) {
         save.bossesBeaten = ['giantCrab','slimey','mirror'];
         persist();
-        game.onVictory();
-      } else {
-        game.schedule(() => { if (game.state === 'playing') startWave(nextWave); }, 2000);
+        // Spawn CD at center
+        game.partyPickups.push(new PartyPickup(WORLD_W / 2, WORLD_H / 2, 'cd'));
+        game.spawnFloater(WORLD_W / 2, WORLD_H / 2 - 60, "2X DROPPED A CD", '#ffcc00', 22, -0.4);
+        game.state = 'cd-wait'; // not playing, but loop still runs to render
+        return;
       }
+      const nextWave = game.wave + 1;
+      game.schedule(() => { if (game.state === 'playing') startWave(nextWave); }, 2000);
     }
   }
   function showWaveBanner(text) {
@@ -600,7 +678,7 @@
       lastTime = now;
       if (game.timeScale < 1 && now > game.timeScaleEnd) game.timeScale = Math.min(1, game.timeScale + 0.05);
       const scaledDt = dt * game.timeScale;
-      if (game.state === 'playing') {
+      if (game.state === 'playing' || game.state === 'cd-wait' || game.state === 'party') {
         try { update(scaledDt); } catch (err) { console.error('upd', err); }
       }
       try { render(); } catch (err) { console.error('rnd', err); }
@@ -624,6 +702,9 @@
     if (game.bossIntroAlpha > 0) game.bossIntroAlpha = Math.max(0, game.bossIntroAlpha - dt / 1500);
 
     try { game.player.update(dt, game); } catch (e) { console.error('p', e); }
+    if (game.follower) { try { game.follower.update(dt, game); } catch (e) {} }
+    for (const pp of game.partyPickups) { try { pp.update(dt, game); } catch (e) {} }
+    for (const dn of game.dancers) { try { dn.update(dt, game); } catch (e) {} }
     for (const e of game.enemies) { try { e.update(dt, game); } catch (er) { console.error('e', er); e.dead = true; } }
     if (!game.arenaActive && game.truck) {
       try { game.truck.update(dt); game.truck.trySuitDude(game); } catch (e) {}
@@ -648,6 +729,8 @@
     game.lightnings  = game.lightnings.filter(l => !l.dead);
     game.bloodSplats = game.bloodSplats.filter(b => b.life > 0);
     game.sonicWaves  = game.sonicWaves.filter(s => s.life > 0);
+    game.partyPickups = game.partyPickups.filter(p => !p.dead);
+    game.dancers      = game.dancers.filter(d => !d.dead);
 
     if (!game.arenaActive && game.truck && game.truck.hp <= 0) game.onTruckDeath();
     updateWaves(dt);
@@ -697,6 +780,8 @@
     const drawables = [];
     if (!game.arenaActive && game.truck) drawables.push(game.truck);
     drawables.push(...game.enemies, ...game.powerUps, game.player);
+    if (game.follower) drawables.push(game.follower);
+    drawables.push(...game.dancers, ...game.partyPickups);
     drawables.sort((a, b) => a.y - b.y);
     for (const d of drawables) { try { d.draw(ctx); } catch (e) {} }
     for (const b of game.bullets) { try { b.draw(ctx); } catch (e) {} }
@@ -752,6 +837,39 @@
       ctx.fillStyle = game.multiplier >= 4 ? '#ff00ff' : '#ffcc00';
       ctx.fillRect(WORLD_W/2 - 50, 86, 100 * a, 3);
       ctx.restore();
+    }
+
+    // ===== POST EFFECTS: drunk (wavy) + smoke (haze) =====
+    const now = performance.now();
+    if (game.drunkUntil > now) {
+      // Wavy color overlay shifting position — approximates drunk vision
+      const remain = (game.drunkUntil - now) / 8000;
+      const wave = Math.sin(now / 200) * 6 * remain;
+      ctx.save();
+      ctx.globalAlpha = 0.18 * remain;
+      ctx.fillStyle = '#ff8800';
+      // Banded horizontal distortion lines
+      for (let y = 0; y < WORLD_H; y += 8) {
+        ctx.fillRect(wave * Math.sin(y / 40 + now / 300), y, WORLD_W, 2);
+      }
+      ctx.restore();
+      // Slight desaturated vignette
+      ctx.fillStyle = `rgba(255,200,0,${0.06 * remain})`;
+      ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+    }
+    if (game.smokeUntil > now) {
+      const remain = (game.smokeUntil - now) / 6000;
+      // Drifting purple haze
+      ctx.save();
+      for (let i = 0; i < 6; i++) {
+        const sx = (i * 137 + (now / 30) % WORLD_W) % WORLD_W;
+        const sy = (i * 211 + (now / 50) % WORLD_H) % WORLD_H;
+        ctx.fillStyle = `rgba(204,136,255,${0.08 * remain})`;
+        ctx.beginPath(); ctx.arc(sx, sy, 50 + i * 10, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+      ctx.fillStyle = `rgba(60,40,80,${0.18 * remain})`;
+      ctx.fillRect(0, 0, WORLD_W, WORLD_H);
     }
   }
 
@@ -868,6 +986,57 @@
       grad.addColorStop(0, 'rgba(0,0,0,0)');
       grad.addColorStop(1, 'rgba(0,0,0,0.5)');
       ctx.fillStyle = grad; ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+    } else if (game.arenaType === 'party') {
+      // AFTER-PARTY scene — dance floor with color-cycling tiles + disco lights
+      ctx.fillStyle = '#0a0010';
+      ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+      // Dance floor — grid of color-flashing squares
+      const tileSize = 50;
+      const danceColors = ['#ff0033','#ffcc00','#00ff66','#0088ff','#ff00ff','#ff8800'];
+      for (let gx = 100; gx < WORLD_W - 80; gx += tileSize) {
+        for (let gy = 110; gy < WORLD_H - 80; gy += tileSize) {
+          const colorIdx = (Math.floor(t / 200) + Math.floor(gx / tileSize) + Math.floor(gy / tileSize)) % danceColors.length;
+          ctx.fillStyle = danceColors[colorIdx] + '44';
+          ctx.fillRect(gx, gy, tileSize - 2, tileSize - 2);
+        }
+      }
+      // DJ booth
+      ctx.fillStyle = '#222';
+      ctx.fillRect(WORLD_W/2 - 80, 30, 160, 50);
+      ctx.fillStyle = '#444';
+      ctx.fillRect(WORLD_W/2 - 70, 40, 60, 30);
+      ctx.fillRect(WORLD_W/2 + 10, 40, 60, 30);
+      ctx.fillStyle = '#111';
+      ctx.beginPath(); ctx.arc(WORLD_W/2 - 40, 55, 12, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(WORLD_W/2 + 40, 55, 12, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#ff0033';
+      ctx.beginPath(); ctx.arc(WORLD_W/2 - 40 + Math.cos(t/100) * 8, 55 + Math.sin(t/100) * 8, 2, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(WORLD_W/2 + 40 + Math.cos(t/100 + 1) * 8, 55 + Math.sin(t/100 + 1) * 8, 2, 0, Math.PI*2); ctx.fill();
+      // 2X DJing on stage
+      ctx.fillStyle = '#ff0033';
+      ctx.fillRect(WORLD_W/2 - 4, 18, 8, 16);
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(WORLD_W/2 - 3, 22, 2, 2);
+      ctx.fillRect(WORLD_W/2 + 1, 22, 2, 2);
+      // Disco ball + facets
+      const ballX = WORLD_W / 2, ballY = 0;
+      ctx.fillStyle = '#888';
+      ctx.beginPath(); ctx.arc(ballX, ballY + 8, 14, 0, Math.PI * 2); ctx.fill();
+      for (let i = 0; i < 8; i++) {
+        ctx.fillStyle = `rgba(255,255,255,${0.3 + Math.sin(t/100 + i) * 0.3})`;
+        ctx.fillRect(ballX - 12 + (i * 3), ballY + 4 + Math.sin(t/80 + i)*2, 2, 2);
+      }
+      // Disco cones
+      const lightCols = ['#ff00aa','#00ffaa','#ffcc00'];
+      for (let i = 0; i < 3; i++) {
+        const sweep = Math.sin(t / 600 + i * 2) * 200;
+        ctx.fillStyle = lightCols[i] + '18';
+        ctx.beginPath();
+        ctx.moveTo(ballX, ballY + 14);
+        ctx.lineTo(ballX + sweep - 100, WORLD_H);
+        ctx.lineTo(ballX + sweep + 100, WORLD_H);
+        ctx.closePath(); ctx.fill();
+      }
     }
   }
 
@@ -1023,6 +1192,22 @@
       persist();
     });
   }
+  // Track switcher
+  document.querySelectorAll('.track-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const track = btn.dataset.track;
+      Audio.playMusic(track);
+      try { Audio.sfx.reload(); } catch (e) {}
+    });
+  });
+  function refreshTrackRowVisibility() {
+    const row = document.getElementById('track-row');
+    if (!row) return;
+    if (save.unlocks.extraTracks) row.classList.remove('hidden');
+    else row.classList.add('hidden');
+  }
+  refreshTrackRowVisibility();
+
   function togglePause() {
     if (game.state === 'playing') {
       game.state = 'paused';

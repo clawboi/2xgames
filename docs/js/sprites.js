@@ -416,30 +416,36 @@ const Sprites = (() => {
   // ============ SUIT DUDE — pops out of Escalade firing ============
   function drawSuitDude(ctx, x, y, angle = 0) {
     const palette = {
-      H: '#000', S: '#d4a574', G: '#111', // shades
-      B: '#111', // suit
+      H: '#000', S: '#d4a574', G: '#000', // shades
+      B: '#0a0a0a', // suit (darker)
       W: '#fff', // shirt
       T: '#cc0022', // tie
     };
+    // Bigger sprite — 3x scale instead of 2x
     const grid = [
       ' HHHHH ',
       'HSSSSSH',
-      'HSGGSSH', // shades
+      'HSGGSSH',
+      'HSGGSSH',
       ' SSSSS ',
-      ' BBWBB ',
-      ' BWTWB ',
-      ' BWTWB ',
+      'BBWWWBB',
+      'BWWTWWB',
+      'BWWTWWB',
+      'BWWTWWB',
     ];
-    drawGrid(ctx, x, y, grid, palette, 2);
+    drawGrid(ctx, x, y, grid, palette, 3);
 
-    // Gun arm pointing at angle
+    // Gun arm
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(angle);
-    ctx.fillStyle = '#111';
-    ctx.fillRect(0, -2, 10, 4);
+    ctx.fillStyle = '#222';
+    ctx.fillRect(0, -3, 14, 5);
     ctx.fillStyle = '#666';
-    ctx.fillRect(8, -1, 4, 2);
+    ctx.fillRect(12, -2, 4, 3);
+    // Muzzle flash if firing
+    ctx.fillStyle = '#ffee00';
+    ctx.fillRect(16, -2, 3, 3);
     ctx.restore();
   }
 
@@ -814,9 +820,149 @@ const Sprites = (() => {
     ctx.restore();
   }
 
+  // ============ FOLLOWER (small NPC trailing player) ============
+  function drawFollower(ctx, x, y, frame = 0, dir = 0) {
+    const palette = {
+      H: '#5a2222', // hair
+      S: '#e0b58b', // skin
+      D: '#ff66aa', // dress
+      F: '#1a1a1a', // shoes
+    };
+    const grid = [
+      ' HHHHH ',
+      'HHSSSHH',
+      ' HSSSH ',
+      '  SSS  ',
+      '  DDD  ',
+      ' DDDDD ',
+      ' DDDDD ',
+      '  S S  ',
+      '  S S  ',
+      '  F F  ',
+    ];
+    const bob = frame % 8 < 4 ? 0 : -1;
+    if (dir === 1) {
+      ctx.save(); ctx.translate(Math.floor(x), 0); ctx.scale(-1, 1);
+      drawGrid(ctx, 0, y + bob, grid, palette, 2);
+      ctx.restore();
+    } else {
+      drawGrid(ctx, x, y + bob, grid, palette, 2);
+    }
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath(); ctx.ellipse(x, y + 12, 9, 3, 0, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // ============ DANCER (party NPC) ============
+  function drawDancer(ctx, x, y, color, kind, frame = 0) {
+    const armUp = Math.sin(frame / 8) > 0;
+    const palette = {
+      H: kind === 'girl' ? '#5a2222' : '#222',
+      S: kind === 'girl' ? '#e0b58b' : '#7a5236',
+      D: color,
+      F: '#1a1a1a',
+    };
+    const arms = armUp ?
+      ['DSDDDDSD', 'D  DD  D'] :  // arms up
+      [' SDDDDS ', '  DDDD  '];   // arms down
+    const grid = [
+      '  HHHH  ',
+      ' HSSSSH ',
+      ' HSSSSH ',
+      '  SSSS  ',
+      arms[0],
+      ' DDDDDD ',
+      arms[1],
+      '  S  S  ',
+      '  S  S  ',
+      '  F  F  ',
+    ];
+    drawGrid(ctx, x, y, grid, palette, 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath(); ctx.ellipse(x, y + 13, 9, 3, 0, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // ============ PARTY PICKUPS (CD / Drink / Smoke / Exit) ============
+  function drawPartyPickup(ctx, x, y, type, frame = 0) {
+    const bob = Math.sin(frame * 0.1) * 3;
+    const ny = y + bob;
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.beginPath(); ctx.arc(x, ny, 18, 0, Math.PI * 2); ctx.fill();
+
+    if (type === 'cd') {
+      // Spinning CD with rainbow shimmer
+      const rot = frame * 0.12;
+      ctx.save();
+      ctx.translate(x, ny);
+      ctx.rotate(rot);
+      // Outer ring
+      ctx.fillStyle = '#ccc';
+      ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2); ctx.fill();
+      // Rainbow gradient
+      const rainbow = ['#ff0033','#ff8800','#ffcc00','#00cc66','#0088ff','#9933ff'];
+      for (let i = 0; i < 6; i++) {
+        ctx.fillStyle = rainbow[i];
+        const a1 = (i / 6) * Math.PI * 2;
+        const a2 = ((i + 1) / 6) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, 12, a1, a2);
+        ctx.closePath();
+        ctx.fill();
+      }
+      // Center hole
+      ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      // "PICK UP" tip
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 9px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('2X CD', x, ny - 22);
+      ctx.textAlign = 'left';
+    } else if (type === 'drink') {
+      // Bottle of liquor
+      ctx.fillStyle = '#aa5500';
+      ctx.fillRect(x - 3, ny - 8, 6, 5);  // neck
+      ctx.fillStyle = '#cc7700';
+      ctx.fillRect(x - 6, ny - 3, 12, 12);  // body
+      ctx.fillStyle = '#ffcc00';
+      ctx.fillRect(x - 5, ny - 1, 10, 4);  // label
+      ctx.fillStyle = '#000';
+      ctx.font = 'bold 6px monospace';
+      ctx.fillText('XX', x - 5, ny + 3);
+    } else if (type === 'smoke') {
+      // Purple smoke wisp / blunt
+      ctx.fillStyle = '#552255';
+      ctx.fillRect(x - 7, ny - 1, 14, 3);  // joint
+      ctx.fillStyle = '#ff8800';
+      ctx.fillRect(x + 6, ny - 1, 2, 3);  // cherry
+      for (let i = 0; i < 4; i++) {
+        const sx = x - 5 + i * 3 + Math.sin(frame / 20 + i) * 2;
+        const sy = ny - 6 - i * 3;
+        ctx.fillStyle = `rgba(204,136,255,${0.6 - i * 0.12})`;
+        ctx.beginPath(); ctx.arc(sx, sy, 3 + i, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (type === 'exit') {
+      // Glowing exit doorway
+      const glow = 0.5 + Math.sin(frame / 20) * 0.3;
+      ctx.fillStyle = `rgba(0,255,102,${glow})`;
+      ctx.fillRect(x - 14, ny - 20, 28, 40);
+      ctx.fillStyle = '#00ff66';
+      ctx.fillRect(x - 12, ny - 18, 24, 36);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(x - 8, ny - 14, 16, 28);
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 9px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('EXIT', x, ny + 30);
+      ctx.textAlign = 'left';
+    }
+  }
+
   return {
     drawPlayer, drawCrab, drawCrabGun, drawPaparazzi, drawFan, drawTruck, drawSuitDude,
     drawGiantCrab, drawSlimey, drawMirror2X,
     drawBullet, drawPowerUp, drawCash, drawBloodSplat, drawSonicWave, drawParticle, drawMuzzleFlash,
+    drawFollower, drawDancer, drawPartyPickup,
   };
 })();
