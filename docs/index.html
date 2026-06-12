@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CRABCAGE 2X</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="CRABCAGE 2X" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-startup-image" href="icons/icon-512.png" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#cc0022" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ============ ANIMATED BACKGROUND CANVAS ============ -->
+  <canvas id="bg-canvas"></canvas>
+
+  <!-- ============ START SCREEN ============ -->
+  <div id="start-screen" class="screen">
+    <button id="menu-mute-btn" title="Toggle audio">🔊</button>
+    <div id="high-score-display">HIGH 0 · $0</div>
+    <h1 class="title">
+      <span class="title-main">CRABCAGE</span>
+      <span class="title-2x">2X</span>
+    </h1>
+    <p class="tagline">// protect the escalade. survive the swarm. //</p>
+
+    <div class="char-preview">
+      <canvas id="char-canvas" width="120" height="160"></canvas>
+    </div>
+
+    <div class="customizer">
+      <div class="cust-row preset-row">
+        <label>PRESET</label>
+        <div class="swatches" id="preset-swatches">
+          <button class="preset-btn" data-preset="schizo">SCHIZO</button>
+          <button class="preset-btn" data-preset="drip">DRIP</button>
+          <button class="preset-btn" data-preset="streetwear">STREET</button>
+          <button class="preset-btn" data-preset="rage">RAGE</button>
+          <button class="preset-btn" data-preset="clean">CLEAN</button>
+          <button class="preset-btn" data-preset="ghost">GHOST</button>
+        </div>
+      </div>
+      <div class="cust-row">
+        <label>FIT</label>
+        <div class="swatches" id="fit-swatches">
+          <button class="swatch" data-fit="#00ff66" style="background:#00ff66"></button>
+          <button class="swatch" data-fit="#cc0022" style="background:#cc0022"></button>
+          <button class="swatch" data-fit="#ffcc00" style="background:#ffcc00"></button>
+          <button class="swatch" data-fit="#9933ff" style="background:#9933ff"></button>
+          <button class="swatch" data-fit="#00aaff" style="background:#00aaff"></button>
+          <button class="swatch" data-fit="#ff00aa" style="background:#ff00aa"></button>
+          <button class="swatch" data-fit="#ff6600" style="background:#ff6600"></button>
+          <button class="swatch" data-fit="#ffffff" style="background:#ffffff"></button>
+        </div>
+      </div>
+      <div class="cust-row">
+        <label>ACCENT</label>
+        <div class="swatches" id="accent-swatches">
+          <button class="swatch" data-accent="#cc0022" style="background:#cc0022"></button>
+          <button class="swatch" data-accent="#00ff66" style="background:#00ff66"></button>
+          <button class="swatch" data-accent="#000000" style="background:#000000"></button>
+          <button class="swatch" data-accent="#ffcc00" style="background:#ffcc00"></button>
+          <button class="swatch" data-accent="#9933ff" style="background:#9933ff"></button>
+          <button class="swatch" data-accent="#00aaff" style="background:#00aaff"></button>
+          <button class="swatch" data-accent="#ffffff" style="background:#ffffff"></button>
+        </div>
+      </div>
+      <div class="cust-row">
+        <label>SHIRT</label>
+        <div class="swatches" id="shirt-swatches">
+          <button class="hat-btn" data-shirtless="true">OFF</button>
+          <button class="hat-btn" data-shirtless="false">ON</button>
+        </div>
+      </div>
+      <div class="cust-row">
+        <label>TATS</label>
+        <div class="swatches" id="tat-swatches">
+          <button class="hat-btn" data-tattoos="true">YEAH</button>
+          <button class="hat-btn" data-tattoos="false">NAH</button>
+        </div>
+      </div>
+      <div class="cust-row">
+        <label>HEAD</label>
+        <div class="swatches" id="hat-swatches">
+          <button class="hat-btn" data-hat="durag">DURAG</button>
+          <button class="hat-btn" data-hat="cap">CAP</button>
+          <button class="hat-btn" data-hat="hood">HOOD</button>
+          <button class="hat-btn" data-hat="beanie">BEANIE</button>
+          <button class="hat-btn" data-hat="bandana">BANDANA</button>
+          <button class="hat-btn" data-hat="headphones">CANS</button>
+          <button class="hat-btn" data-hat="mohawk">MOHAWK</button>
+          <button class="hat-btn" data-hat="none">BALD</button>
+        </div>
+      </div>
+      <div class="cust-row">
+        <label>SHADES</label>
+        <div class="swatches" id="shades-swatches">
+          <button class="hat-btn" data-shades="false">NAH</button>
+          <button class="hat-btn" data-shades="true">YEAH</button>
+        </div>
+      </div>
+      <div class="cust-row">
+        <label>VIBE</label>
+        <div class="swatches" id="pattern-swatches">
+          <button class="hat-btn" data-pattern="solid">SOLID</button>
+          <button class="hat-btn" data-pattern="stripe">STRIPE</button>
+          <button class="hat-btn" data-pattern="flame">FLAME</button>
+          <button class="hat-btn" data-pattern="glow">GLOW</button>
+        </div>
+      </div>
+      <div class="cust-row">
+        <label>CHAINS</label>
+        <div class="swatches" id="chain-swatches">
+          <button class="hat-btn" data-chain="gold">GOLD</button>
+          <button class="hat-btn" data-chain="ice">ICE</button>
+          <button class="hat-btn" data-chain="cuban">CUBAN</button>
+          <button class="hat-btn" data-chain="platinum">PLAT</button>
+          <button class="hat-btn" data-chain="none">NONE</button>
+        </div>
+      </div>
+    </div>
+
+    <button id="randomize-btn" class="small-btn">🎲 RANDOMIZE</button>
+    <button id="start-btn" class="big-btn">START GAME</button>
+    <div class="menu-secondary">
+      <button id="shop-btn" class="small-btn">💰 SHOP</button>
+      <button id="scores-btn" class="small-btn">🏆 SCORES</button>
+      <button id="howto-btn" class="small-btn">HOW TO PLAY</button>
+    </div>
+  </div>
+
+  <!-- ============ SHOP ============ -->
+  <div id="shop-screen" class="screen hidden">
+    <h2>SHOP <span class="shop-bank" id="shop-cash">$0</span></h2>
+    <div class="shop-content" id="shop-items"></div>
+    <button id="shop-back" class="big-btn">BACK</button>
+  </div>
+
+  <!-- ============ SCORES ============ -->
+  <div id="scores-screen" class="screen hidden">
+    <h2>TOP 5</h2>
+    <div class="scores-content" id="scores-list"></div>
+    <button id="scores-back" class="big-btn">BACK</button>
+  </div>
+
+  <!-- ============ HOW TO PLAY ============ -->
+  <div id="howto-screen" class="screen hidden">
+    <h2>HOW TO PLAY</h2>
+    <div class="howto-content">
+      <p><strong>GOAL:</strong> Keep the black Escalade alive. Survive 15 waves. Beat 3 bosses.</p>
+      <p><strong>DESKTOP:</strong> WASD or arrows to move. Mouse aims. Left-click shoots. 1-7 or scroll wheel switches weapons. SPACE to reload. SHIFT to dash. E to emote.</p>
+      <p><strong>iPHONE:</strong> Drag left half to move (joystick follows your thumb). FIRE button auto-aims at nearest enemy. DASH = invincible roll. EMOTE = dance.</p>
+      <p><strong>WEAPONS:</strong> Draco, Glock, Fists (wider melee arc + forward dash), RPG (now explodes on impact OR mid-flight with massive screen shake), Crab Laser (wave 6+ pickup). SHOP unlocks: Sawed-off shotgun, Stun gun (sonic AOE).</p>
+      <p><strong>POWER-UPS:</strong> Health, Speed, Damage, Shield, Ammo, Lightning (smites all in 220px), Slo-mo.</p>
+      <p><strong>CASH:</strong> Drops from kills. Magnets to you. Carries between runs in your BANK. Spend in shop on weapon damage, truck HP, move speed, weapon unlocks.</p>
+      <p><strong>WATCH OUT:</strong> Wave 8+ Crabs with guns. Wave 10+ Fans run at you for pics — SHOOT THEM AND YOUR GUN LOCKS FOR 5 SECONDS. Boss fights = no truck, you're in their world; dodge lightning shadows.</p>
+      <p><strong>SUIT DUDE:</strong> When the Escalade's HP drops below half, a dude in shades pops out and starts firing at enemies.</p>
+      <p><strong>BOSSES:</strong> Wave 5 = Giant Crab (underwater). Wave 10 = 2Slimey (mosh pit, 2X on stage). Wave 15 = Mirror 2X (caged in). Lightning strikes during boss fights — watch for shadow telegraphs and step OUT.</p>
+      <p><strong>AFTER WAVE 15:</strong> Mirror 2X drops a CD. Pick it up → after-party. Drink (wavy vision), smoke (hazy slo-mo), bump into a girl dancer to take her home as your follower. Walk into the green EXIT door to continue into wave 16+.</p>
+      <p><strong>FOLLOWER:</strong> The girl you took from the party trails you through later waves. She's there for the vibes.</p>
+    </div>
+    <button id="howto-back" class="big-btn">BACK</button>
+  </div>
+
+  <!-- ============ GAME SCREEN ============ -->
+  <div id="game-screen" class="screen hidden">
+    <canvas id="game-canvas"></canvas>
+
+    <div id="hud">
+      <div class="hud-row" id="player-hp-row">
+        <div class="hud-bar">
+          <span class="hud-label">2X</span>
+          <div class="bar"><div id="player-hp-fill" class="bar-fill hp"></div></div>
+        </div>
+      </div>
+      <div class="hud-row" id="truck-hp-row">
+        <div class="hud-bar">
+          <span class="hud-label">TRUCK</span>
+          <div class="bar"><div id="truck-hp-fill" class="bar-fill truck"></div></div>
+        </div>
+      </div>
+      <div class="hud-row">
+        <div class="hud-stat" id="hud-wave">WAVE 1</div>
+        <div class="hud-stat" id="hud-score">0</div>
+        <div class="hud-stat hud-cash" id="hud-cash">$0</div>
+        <div class="hud-stat" id="hud-ammo">AMMO --</div>
+      </div>
+    </div>
+
+    <div id="weapon-bar">
+      <button class="weapon-slot" data-weapon="0">DRACO</button>
+      <button class="weapon-slot" data-weapon="1">GLOCK</button>
+      <button class="weapon-slot" data-weapon="2">FISTS</button>
+      <button class="weapon-slot" data-weapon="3">RPG</button>
+      <button class="weapon-slot locked" data-weapon="4">CRAB</button>
+      <button class="weapon-slot" data-weapon="5" style="display:none;">SAWED</button>
+      <button class="weapon-slot" data-weapon="6" style="display:none;">STUN</button>
+    </div>
+
+    <div id="touch-controls">
+      <div id="joystick">
+        <div id="joystick-stick"></div>
+      </div>
+      <div id="touch-actions">
+        <button id="emote-btn" class="touch-btn small">💃</button>
+        <button id="dash-btn" class="touch-btn">DASH</button>
+        <button id="fire-btn" class="touch-btn fire">FIRE</button>
+      </div>
+    </div>
+
+    <button id="pause-btn" class="corner-btn">II</button>
+  </div>
+
+  <!-- ============ PAUSE OVERLAY ============ -->
+  <div id="pause-overlay" class="overlay hidden">
+    <div class="overlay-content pause-panel">
+      <h2>PAUSED</h2>
+      <button id="resume-btn" class="big-btn">RESUME</button>
+      <button id="pause-shop-btn" class="big-btn shop-btn-gold">💰 SHOP</button>
+      <button id="restart-btn" class="big-btn">RESTART</button>
+      <button id="quit-btn" class="small-btn">QUIT TO MENU</button>
+      <div class="volume-row">
+        <label>VOLUME</label>
+        <input type="range" id="volume-slider" min="0" max="100" value="45" />
+      </div>
+      <div class="track-row hidden" id="track-row">
+        <label>TRACK</label>
+        <button class="track-btn" data-track="gameplay">GAMEPLAY</button>
+        <button class="track-btn" data-track="boss">BOSS</button>
+        <button class="track-btn" data-track="menu">MENU</button>
+      </div>
+      <div class="audio-toggle">
+        <label><input type="checkbox" id="music-toggle" checked /> MUSIC</label>
+        <label><input type="checkbox" id="sfx-toggle" checked /> SFX</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ GAME OVER ============ -->
+  <div id="gameover-overlay" class="overlay hidden">
+    <div class="overlay-content">
+      <h2 id="gameover-title">GAME OVER</h2>
+      <p id="gameover-stats"></p>
+      <button id="retry-btn" class="big-btn">RETRY</button>
+      <button id="menu-btn" class="small-btn">MAIN MENU</button>
+    </div>
+  </div>
+
+  <!-- ============ WAVE BANNER ============ -->
+  <div id="wave-banner" class="banner hidden">
+    <h2 id="banner-text">WAVE 1</h2>
+  </div>
+
+  <!-- Audio tracks -->
+  <audio id="music-menu"     src="music/menu.mp3"    loop preload="auto"></audio>
+  <audio id="music-gameplay" src="music/gameplay.mp3" loop preload="auto"></audio>
+  <audio id="music-boss"     src="music/boss.mp3"    loop preload="auto"></audio>
+  <audio id="music-party"    src="music/partysong.mp3" loop preload="metadata"></audio>
+
+  <!-- Game scripts (order matters) -->
+  <script src="js/audio.js"></script>
+  <script src="js/sprites.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/weapons.js"></script>
+  <script src="js/entities.js"></script>
+  <script src="js/waves.js"></script>
+  <script src="js/game.js"></script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
