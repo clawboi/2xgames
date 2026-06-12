@@ -146,7 +146,7 @@ class Player {
     for (let i = 1; i <= 7; i++) {
       if (Input.isKey(i.toString())) {
         const idx = i - 1;
-        if (idx === 4 && !this.crabUnlocked) continue;
+        if (idx === 4 && !this.Unlocked) continue;
         if (idx > 4 && !this.unlockedWeapons.has(idx)) continue;
         this.weaponIdx = idx;
       }
@@ -597,7 +597,7 @@ class Enemy {
 // ===== CRAB (standard) =====
 class Crab extends Enemy {
   constructor(x, y, mod = 1) {
-    super(x, y, { hp: 40 * mod, speed: 1.0, damage: 8, radius: 12, score: 10 });
+    super(x, y, { hp: 8 * mod, speed: 1.0, damage: 8, radius: 12, score: 10 });
     this.frame = Math.floor(Math.random() * 100);
   }
   update(dt, game) {
@@ -620,7 +620,7 @@ class Crab extends Enemy {
 // ===== FAST CRAB =====
 class FastCrab extends Enemy {
   constructor(x, y, mod = 1) {
-    super(x, y, { hp: 24 * mod, speed: 2.1, damage: 5, radius: 10, score: 15 });
+    super(x, y, { hp: 6 * mod, speed: 2.1, damage: 5, radius: 10, score: 15 });
     this.frame = Math.floor(Math.random() * 100);
     this.scale = 0.75;
   }
@@ -651,7 +651,7 @@ class FastCrab extends Enemy {
 // ===== TANK CRAB =====
 class TankCrab extends Enemy {
   constructor(x, y, mod = 1) {
-    super(x, y, { hp: 120 * mod, speed: 0.7, damage: 14, radius: 18, score: 30 });
+    super(x, y, { hp: 15 * mod, speed: 0.7, damage: 14, radius: 18, score: 30 });
     this.frame = Math.floor(Math.random() * 100);
     this.scale = 1.5;
   }
@@ -675,7 +675,7 @@ class TankCrab extends Enemy {
 // ===== EXPLODER CRAB =====
 class ExploderCrab extends Enemy {
   constructor(x, y, mod = 1) {
-    super(x, y, { hp: 30 * mod, speed: 1.5, damage: 15, radius: 11, score: 20 });
+    super(x, y, { hp: 3 * mod, speed: 1.5, damage: 15, radius: 11, score: 20 });
     this.frame = Math.floor(Math.random() * 100);
     this.pulseTimer = 0;
   }
@@ -726,7 +726,7 @@ class ExploderCrab extends Enemy {
 // ===== ARMED CRAB (wave 8+) — crab with gun on its back =====
 class ArmedCrab extends Enemy {
   constructor(x, y, mod = 1) {
-    super(x, y, { hp: 55 * mod, speed: 0.85, damage: 6, radius: 13, score: 25 });
+    super(x, y, { hp: 10 * mod, speed: 0.85, damage: 6, radius: 13, score: 25 });
     this.frame = Math.floor(Math.random() * 100);
     this.shootCooldown = 1500 + Math.random() * 1000;
     this.preferredRange = 220;
@@ -760,7 +760,7 @@ class ArmedCrab extends Enemy {
 // ===== PAPARAZZI =====
 class Paparazzi extends Enemy {
   constructor(x, y, mod = 1) {
-    super(x, y, { hp: 12 * mod, speed: 1.5, damage: 0, radius: 11, score: 8 });
+    super(x, y, { hp: 5 * mod, speed: 1.5, damage: 0, radius: 11, score: 8 });
     this.frame = Math.floor(Math.random() * 100);
     this.flashTimer = 0;
   }
@@ -830,7 +830,7 @@ class Fan extends Enemy {
 // ===== GIANT CRAB BOSS =====
 class GiantCrab extends Enemy {
   constructor(x, y, hpMult = 1) {
-    super(x, y, { hp: 1800 * hpMult, speed: 0.6, damage: 22, radius: 50, score: 800 });
+    super(x, y, { hp: 30 * hpMult, speed: 0.6, damage: 22, radius: 50, score: 800 });
     this.isBoss = true;
     this.name = 'GIANT CRAB';
     this.frame = 0;
@@ -864,7 +864,7 @@ class GiantCrab extends Enemy {
 // ===== 2SLIMEY BOSS =====
 class Slimey extends Enemy {
   constructor(x, y, hpMult = 1) {
-    super(x, y, { hp: 2800 * hpMult, speed: 0.9, damage: 18, radius: 32, score: 1500 });
+    super(x, y, { hp: 60 * hpMult, speed: 0.9, damage: 18, radius: 32, score: 1500 });
     this.isBoss = true;
     this.name = '2SLIMEY';
     this.frame = 0;
@@ -914,7 +914,7 @@ class Slimey extends Enemy {
 // ===== MIRROR 2X BOSS =====
 class Mirror2X extends Enemy {
   constructor(x, y, customization, hpMult = 1) {
-    super(x, y, { hp: 4000 * hpMult, speed: 1.4, damage: 25, radius: 28, score: 3000 });
+    super(x, y, { hp: 70 * hpMult, speed: 1.4, damage: 25, radius: 28, score: 3000 });
     this.isBoss = true;
     this.name = 'MIRROR 2X';
     this.cust = customization;
