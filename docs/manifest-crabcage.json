@@ -1,0 +1,25 @@
+{
+  "name": "CRABCAGE 2X",
+  "short_name": "CRABCAGE",
+  "description": "Protect the Escalade from crab fans and paparazzi as rapper 2X.",
+  "start_url": "./crabcage.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#1a0f08",
+  "theme_color": "#ffcc00",
+  "icons": [
+    {
+      "src": "icons/crabcage-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/crabcage-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
