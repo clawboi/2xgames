@@ -1,0 +1,25 @@
+{
+  "name": "FAMEUP.io",
+  "short_name": "FAMEUP",
+  "description": "Gaming meets music. Featured artist mini-games every drop.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#0a0008",
+  "theme_color": "#ff0033",
+  "icons": [
+    {
+      "src": "icons/fameup.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/fameup.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
