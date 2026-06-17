@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>FAMEUP.io</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="FAMEUP.io" />
+  <meta name="description" content="FAMEUP.io — gaming meets music. featured artist mini-games every drop." />
+  <meta property="og:title" content="FAMEUP.io" />
+  <meta property="og:description" content="gaming meets music. featured artist mini-games every drop." />
+  <meta property="og:image" content="icons/FU.io.png" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="FAMEUP.io" />
+  <meta name="twitter:description" content="gaming meets music. featured artist mini-games every drop." />
+  <link rel="apple-touch-icon" href="icons/FU.io.png" />
+  <link rel="apple-touch-startup-image" href="icons/FU.io.png" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#cc0022" />
+  <link rel="stylesheet" href="css/style.css?v=0.31.0" />
+  <!-- PeerJS for WebRTC P2P coop (free signaling) -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <style>
+    /* Install gate styles — inlined so they can't be missed */
+    #ios-gate-inline {
+      position: fixed; inset: 0; z-index: 99999;
+      background: #0a0000;
+      display: none;
+      flex-direction: column; align-items: center; justify-content: center;
+      padding: 24px; text-align: center;
+      font-family: 'Press Start 2P', monospace;
+    }
+    #ios-gate-inline.show { display: flex; }
+    .ig-title {
+      font-size: clamp(34px, 11vw, 56px);
+      color: #ff0033; letter-spacing: 4px;
+      text-shadow: 0 0 16px rgba(255,0,51,0.85);
+      margin: 0 0 4px;
+    }
+    .ig-2x {
+      font-size: clamp(28px, 9vw, 44px);
+      color: #fff; letter-spacing: 8px;
+      text-shadow: 0 0 12px rgba(255,0,51,0.6);
+      margin: 0 0 20px;
+    }
+    .ig-cta {
+      color: #ffcc00; font-size: 13px;
+      letter-spacing: 2px; margin: 16px 0 20px;
+      text-shadow: 0 0 8px rgba(255,204,0,0.7);
+    }
+    .ig-step {
+      color: #fff; font-size: 11px; line-height: 1.7;
+      max-width: 320px; margin: 4px 0;
+      text-align: left;
+    }
+    .ig-step strong { color: #ff0033; }
+    .ig-foot { color: #555; font-size: 8px; margin-top: 20px; letter-spacing: 1px; }
+  </style>
+</head>
+<body>
+  <div id="fu-splash">
+    <div class="fu-splash-logo">FAMEUP<span class="fu-io">.io</span></div>
+    <div class="fu-splash-sub">// gaming meets music //</div>
+    <div class="fu-splash-loader">
+      <div class="fu-splash-bar"></div>
+    </div>
+  </div>
+
+  <!-- ============ INLINE INSTALL GATE — must always render on iPhone Safari ============ -->
+  <div id="ios-gate-inline">
+    <h1 class="ig-title">FAMEUP</h1>
+    <div class="ig-2x">.io</div>
+    <div class="ig-cta">ADD TO HOME SCREEN TO PLAY</div>
+    <div class="ig-step"><strong>1.</strong> tap the <strong>SHARE</strong> button at the bottom of Safari</div>
+    <div class="ig-step"><strong>2.</strong> scroll down and tap <strong>"Add to Home Screen"</strong></div>
+    <div class="ig-step"><strong>3.</strong> tap <strong>Add</strong>, then open <strong>FAMEUP</strong> from your home screen</div>
+    <div class="ig-foot">// installed-only on iPhone //</div>
+  </div>
+  <script>
+    // Runs BEFORE any other script. If it fails, page renders normally and game.js still runs.
+    (function(){
+      try {
+        var ua = navigator.userAgent || '';
+        var isIOS = /iPhone|iPad|iPod/.test(ua) ||
+          (ua.indexOf('Mac') > -1 && 'ontouchend' in document && navigator.maxTouchPoints > 1);
+        var standalone = window.navigator.standalone === true ||
+          (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+        if (isIOS && !standalone) {
+          var gate = document.getElementById('ios-gate-inline');
+          if (gate) gate.classList.add('show');
+          // Hide body content underneath so it can't flash through
+          document.body.style.background = '#0a0000';
+        }
+      } catch (e) {}
+    })();
+  </script>
+
+  <!-- ============ ANIMATED BACKGROUND CANVAS ============ -->
+  <canvas id="bg-canvas"></canvas>
+
+  <!-- ============ iOS INSTALL GATE (first-visit on Safari) ============ -->
+  <div id="ios-gate" class="screen hidden">
+    <div class="install-gate-content">
+      <h1 class="install-gate-title">FAMEUP</h1>
+      <div class="install-gate-2x">.io</div>
+      <p class="install-gate-sub">// gaming meets music //</p>
+      <img src="icons/FU.io.png" class="install-gate-icon" alt="FAMEUP" />
+      <p class="install-gate-headline">ADD TO HOME SCREEN TO PLAY</p>
+      <div class="install-gate-instr">
+        <div class="install-step"><strong>1.</strong> tap the <strong>SHARE</strong> button <span class="share-glyph">⬆</span> at the bottom of safari</div>
+        <div class="install-step"><strong>2.</strong> scroll down → tap <strong>"add to home screen"</strong></div>
+        <div class="install-step"><strong>3.</strong> tap <strong>add</strong>, then open <strong>FAMEUP</strong> from your home screen</div>
+      </div>
+      <p class="install-gate-foot">// installed-only on iPhone for the smoothest experience //</p>
+    </div>
+  </div>
+
+  <!-- ============ FAMEUP HOME (default landing) ============ -->
+  <div id="fameup-home" class="screen">
+    <!-- Visible version pill + emergency force update -->
+    <div class="fu-version-pill" id="fu-version-pill" title="Tap to force update">
+      <span id="fu-version-text">v0.31.0</span>
+      <span class="fu-version-tap">tap = force update</span>
+    </div>
+    <canvas id="fu-bg-canvas"></canvas>
+    <!-- Top bar: logo + profile -->
+    <div class="fu-topbar">
+      <div class="fu-logo">FAMEUP<span class="fu-io">.io</span></div>
+      <div style="display:flex;gap:6px;">
+        <button id="fu-settings-btn" class="fu-profile" style="padding:8px 10px;font-size:14px;">⚙</button>
+        <button id="fu-profile-btn" class="fu-profile">
+          <canvas id="fu-profile-mini" width="20" height="26" style="image-rendering:pixelated;vertical-align:middle;margin-right:4px;"></canvas>
+          <span id="fu-profile-label">GUEST</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Level / XP bar -->
+    <div class="fu-level-row" id="fu-level-row">
+      <div class="fu-level-badge"><span class="fu-level-num" id="fu-level-num">1</span> LVL</div>
+      <div class="fu-level-bar">
+        <div class="fu-level-fill" id="fu-level-fill"></div>
+        <div class="fu-level-text" id="fu-level-text">0 / 100 XP</div>
+      </div>
+    </div>
+
+    <!-- Live activity ticker -->
+    <div class="fu-ticker" id="fu-ticker">
+      <div class="fu-ticker-track" id="fu-ticker-track">
+        <span class="fu-ticker-item">⚡ LOADING FEED...</span>
+      </div>
+    </div>
+
+    <!-- Daily mission -->
+    <div class="fu-daily" id="fu-daily">
+      <div class="fu-daily-label">
+        <span class="fu-daily-icon">🎯</span>
+        <span>DAILY MISSION</span>
+      </div>
+      <div class="fu-daily-task" id="fu-daily-task">Loading...</div>
+      <div class="fu-daily-bar">
+        <div class="fu-daily-bar-fill" id="fu-daily-bar-fill"></div>
+        <div class="fu-daily-bar-text" id="fu-daily-bar-text">0 / 10</div>
+      </div>
+    </div>
+
+    <!-- Featured artist banner -->
+    <div class="fu-featured" id="fu-featured-banner" style="cursor:pointer;">
+      <div class="fu-featured-tag">★ FEATURED THIS DROP</div>
+      <div class="fu-featured-artist">2X</div>
+      <div class="fu-featured-game">CRABCAGE 2X</div>
+      <div class="fu-featured-sub">protect the escalade. survive the swarm.</div>
+      <button id="fu-play-crabcage" class="fu-play-btn">▶ PLAY NOW</button>
+      <div class="fu-ep-links-mini">
+        <a id="fu-spotify-link" href="#" target="_blank">🎧 SPOTIFY</a>
+        <a id="fu-apple-link" href="#" target="_blank">🎵 APPLE</a>
+      </div>
+    </div>
+
+    <!-- Player stats summary -->
+    <div id="fu-stats-line" class="fu-stats-line"></div>
+
+    <!-- Game tiles -->
+    <div class="fu-section-label">MORE GAMES</div>
+    <div class="fu-tiles">
+      <button class="fu-tile" data-game="standoff">
+        <div class="fu-tile-art" style="background:linear-gradient(135deg,#ff6600,#990000);">🎯</div>
+        <div class="fu-tile-name">STANDOFF</div>
+        <div class="fu-tile-sub">PvP arena · 8 players</div>
+      </button>
+      <button class="fu-tile" data-game="hq">
+        <div class="fu-tile-art" style="background:linear-gradient(135deg,#999,#222);">💬</div>
+        <div class="fu-tile-name">HQ</div>
+        <div class="fu-tile-sub">chat lobby · meet players</div>
+      </button>
+      <button class="fu-tile fu-tile-locked">
+        <div class="fu-tile-art" style="background:linear-gradient(135deg,#444,#222);">🔒</div>
+        <div class="fu-tile-name">COMING SOON</div>
+        <div class="fu-tile-sub">more drops</div>
+      </button>
+    </div>
+
+    <div class="fu-section-label" style="margin-top:24px;">YOUR STUFF</div>
+    <div class="fu-tiles fu-tiles-small">
+      <button class="fu-tile" data-game="inventory">
+        <div class="fu-tile-art" style="background:linear-gradient(135deg,#ff0033,#660019);">🎒</div>
+        <div class="fu-tile-name">MY VAULT</div>
+        <div class="fu-tile-sub">character · gear · stats</div>
+      </button>
+      <button class="fu-tile" data-game="customize">
+        <div class="fu-tile-art" style="background:linear-gradient(135deg,#00aaff,#003366);">👤</div>
+        <div class="fu-tile-name">CUSTOMIZE</div>
+        <div class="fu-tile-sub">outfit · presets · emotes</div>
+      </button>
+    </div>
+
+    <div class="fu-footer">
+      <div>FAMEUP.io · v0.31.0 · made for the fans</div>
+      <div class="fu-share-row">
+        <button class="fu-share-btn" data-share="crabcage">📎 SHARE CRABCAGE</button>
+        <button class="fu-share-btn" data-share="standoff">📎 SHARE STANDOFF</button>
+        <button class="fu-share-btn" data-share="hq">📎 SHARE HQ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ STANDOFF LOBBY ============ -->
+  <div id="standoff-lobby" class="screen hidden">
+    <div class="std-topbar">
+      <button id="std-back-btn" class="fameup-home-btn" style="position:relative;top:0;left:0;">⌂ FAMEUP</button>
+      <div class="std-title">STANDOFF</div>
+    </div>
+
+    <div class="std-lobby-preview">
+      <canvas id="std-char-preview" width="64" height="84"></canvas>
+      <div class="std-lobby-preview-info">
+        <div class="std-lobby-preview-name" id="std-char-preview-name">YOUR FIGHTER</div>
+        <div class="std-lobby-preview-tip">EDIT IN FAMEUP → CUSTOMIZE</div>
+      </div>
+    </div>
+
+    <div class="std-section">
+      <label class="std-label">MAP</label>
+      <div class="std-maps" id="std-maps">
+        <button class="std-map active" data-map="streets">
+          <div class="std-map-thumb" style="background:linear-gradient(180deg,#333 0%,#222 100%);">🏙</div>
+          <div>STREETS OF LA</div>
+        </button>
+        <button class="std-map" data-map="egypt">
+          <div class="std-map-thumb" style="background:linear-gradient(180deg,#ffcc66 0%,#996633 100%);">🏜</div>
+          <div>EGYPT PYRAMIDS</div>
+        </button>
+        <button class="std-map" data-map="africa">
+          <div class="std-map-thumb" style="background:linear-gradient(180deg,#225522 0%,#114411 100%);">🌴</div>
+          <div>AFRICA JUNGLE</div>
+        </button>
+        <button class="std-map" data-map="korea">
+          <div class="std-map-thumb" style="background:linear-gradient(180deg,#ff66aa 0%,#660033 100%);">🌃</div>
+          <div>SOUTH KOREA</div>
+        </button>
+        <button class="std-map" data-map="atlantis">
+          <div class="std-map-thumb" style="background:linear-gradient(180deg,#0088cc 0%,#003355 100%);">🌊</div>
+          <div>ATLANTIS</div>
+        </button>
+        <button class="std-map" data-map="heaven">
+          <div class="std-map-thumb" style="background:linear-gradient(180deg,#fff 0%,#ccc 100%);color:#444;">☁</div>
+          <div>HEAVEN</div>
+        </button>
+      </div>
+    </div>
+
+    <div class="std-section std-row">
+      <div class="std-col">
+        <label class="std-label">PRIMARY WEAPON</label>
+        <select id="std-primary" class="std-select">
+          <option value="0">DRACO</option>
+          <option value="1">GLOCK</option>
+          <option value="3">RPG</option>
+          <option value="5">SAWED-OFF</option>
+          <option value="7">GOLD DRACO</option>
+          <option value="9">PLASMA</option>
+          <option value="10">TESLA</option>
+          <option value="11">FLAMER</option>
+        </select>
+      </div>
+      <div class="std-col">
+        <label class="std-label">SECONDARY</label>
+        <select id="std-secondary" class="std-select">
+          <option value="1">GLOCK</option>
+          <option value="2">FISTS</option>
+          <option value="6">STUN GUN</option>
+          <option value="12">FREEZE</option>
+          <option value="13">HONEY UZI</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="std-section std-row">
+      <div class="std-col">
+        <label class="std-label">BOTS: <span id="std-bots-count">3</span></label>
+        <input type="range" id="std-bots" min="0" max="7" value="3" class="std-slider" />
+      </div>
+      <div class="std-col">
+        <label class="std-label">BOT DIFFICULTY</label>
+        <div class="std-pill-row">
+          <button class="std-pill" data-diff="easy">EASY</button>
+          <button class="std-pill active" data-diff="normal">NORMAL</button>
+          <button class="std-pill" data-diff="hard">HARD</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="std-section std-row">
+      <div class="std-col">
+        <label class="std-label">MODE</label>
+        <div class="std-pill-row">
+          <button class="std-pill active" data-mode="ffa">FREE FOR ALL</button>
+          <button class="std-pill" data-mode="2v2">TEAM 2v2</button>
+          <button class="std-pill" data-mode="4v4">TEAM 4v4</button>
+        </div>
+      </div>
+      <div class="std-col">
+        <label class="std-label">SCORE TO WIN: <span id="std-score-val">15</span></label>
+        <input type="range" id="std-score" min="5" max="50" step="5" value="15" class="std-slider" />
+      </div>
+    </div>
+
+    <div class="std-section">
+      <label class="std-label">PICK YOUR POWER (Q to activate)</label>
+      <div class="std-power-pick" id="std-power-pick">
+        <button class="std-power active" data-power="regen">
+          <span class="std-power-icon">❤</span>
+          <div class="std-power-name">REGEN</div>
+          <div class="std-power-desc">+2 HP/SEC</div>
+        </button>
+        <button class="std-power" data-power="doubledamage">
+          <span class="std-power-icon">💥</span>
+          <div class="std-power-name">DOUBLE TAP</div>
+          <div class="std-power-desc">1.5X DMG</div>
+        </button>
+        <button class="std-power" data-power="ghost">
+          <span class="std-power-icon">👻</span>
+          <div class="std-power-name">GHOST</div>
+          <div class="std-power-desc">INVIS 3S</div>
+        </button>
+        <button class="std-power" data-power="freeze">
+          <span class="std-power-icon">❄</span>
+          <div class="std-power-name">ICE SHOT</div>
+          <div class="std-power-desc">SLOW HITS</div>
+        </button>
+        <button class="std-power" data-power="portal">
+          <span class="std-power-icon">🌀</span>
+          <div class="std-power-name">PORTAL</div>
+          <div class="std-power-desc">TP ANCHOR</div>
+        </button>
+        <button class="std-power" data-power="overclock">
+          <span class="std-power-icon">⚡</span>
+          <div class="std-power-name">OVERCLOCK</div>
+          <div class="std-power-desc">FAST FIRE</div>
+        </button>
+      </div>
+    </div>
+
+    <div class="std-section">
+      <label class="std-label">LOBBY (OPTIONAL — JOIN FRIENDS)</label>
+      <div class="std-row">
+        <button id="std-host-btn" class="std-action-btn">HOST · CREATE CODE</button>
+        <button id="std-join-btn" class="std-action-btn">JOIN · ENTER CODE</button>
+      </div>
+      <div id="std-code-area" class="hidden"></div>
+    </div>
+
+    <button id="std-start-btn" class="std-start-btn">▶ START MATCH</button>
+  </div>
+
+  <!-- ============ STANDOFF GAME (canvas) ============ -->
+  <div id="standoff-game" class="screen hidden">
+    <canvas id="std-canvas" width="800" height="600"></canvas>
+    <div id="std-hud">
+      <div id="std-hud-score">YOU: 0</div>
+      <div id="std-hud-target">FIRST TO 15</div>
+      <div id="std-hud-leaders"></div>
+    </div>
+    <!-- Desktop key hints — hidden on touch via CSS -->
+    <div id="std-keyhints">
+      <div class="std-keyhint"><kbd>WASD</kbd> MOVE</div>
+      <div class="std-keyhint"><kbd>MOUSE</kbd> AIM</div>
+      <div class="std-keyhint"><kbd>LMB / SPACE</kbd> FIRE</div>
+      <div class="std-keyhint"><kbd>SHIFT</kbd> DASH</div>
+      <div class="std-keyhint"><kbd>Q</kbd> POWER</div>
+      <div class="std-keyhint"><kbd>R</kbd> RELOAD</div>
+      <div class="std-keyhint"><kbd>TAB</kbd> SWAP WEAPON</div>
+    </div>
+    <button id="std-quit-btn" class="corner-btn" style="top:14px;right:14px;">✕</button>
+    <button id="std-pause-btn" class="corner-btn" style="top:14px;left:14px;">II</button>
+    <button id="std-reload-btn" class="std-mobile-btn" style="bottom:130px;right:30px;">R</button>
+    <button id="std-dash-btn">⇢</button>
+    <button id="std-power-btn">⚡</button>
+    <button id="std-weapon-btn" class="std-mobile-btn">🔫</button>
+    <button id="std-fire-btn" class="std-mobile-btn">FIRE</button>
+    <div id="std-damage-flash"></div>
+    <div id="std-death-overlay" class="hidden">
+      <div class="std-death-content">
+        <div class="std-death-label">YOU WERE KILLED BY</div>
+        <div class="std-death-killer" id="std-death-killer">—</div>
+        <div class="std-death-weapon" id="std-death-weapon">—</div>
+        <div class="std-death-timer">RESPAWN IN <span id="std-death-timer-val">2</span>S</div>
+      </div>
+    </div>
+    <div id="std-result-overlay" class="overlay hidden">
+      <div class="overlay-content">
+        <h2 id="std-result-title">VICTORY</h2>
+        <p id="std-result-stats">--</p>
+        <button id="std-result-rematch" class="big-btn" style="background:#ff6600;border-color:#ffaa55;">▶ REMATCH</button>
+        <button id="std-result-back" class="big-btn">BACK TO LOBBY</button>
+        <button id="std-result-home" class="small-btn">HOME</button>
+      </div>
+    </div>
+    <div id="std-pause-overlay" class="overlay hidden">
+      <div class="overlay-content">
+        <h2>PAUSED</h2>
+        <button id="std-pause-resume" class="big-btn">▶ RESUME</button>
+        <button id="std-pause-quit" class="big-btn">QUIT MATCH</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ HQ LOBBY BROWSER ============ -->
+  <div id="hq-lobby" class="screen hidden">
+    <div class="fu-topbar">
+      <button class="fameup-home-btn" id="hq-lobby-back">⌂ FAMEUP</button>
+      <div class="fu-logo" style="font-size:18px;">HQ <span class="fu-io">LOBBIES</span></div>
+      <div style="width:90px;"></div>
+    </div>
+    <p style="text-align:center;color:#aaa;font-family:'Press Start 2P',monospace;font-size:9px;letter-spacing:2px;margin:6px 0 14px;">JOIN A LOBBY OR HOST YOUR OWN</p>
+
+    <button id="hq-create-btn" class="hq-create-btn">+ CREATE LOBBY</button>
+
+    <div class="hq-lobby-list" id="hq-lobby-list"></div>
+
+    <div id="hq-create-modal" class="hq-modal hidden">
+      <div class="hq-modal-content">
+        <h3>NEW LOBBY</h3>
+        <input id="hq-create-name" class="signin-input" placeholder="LOBBY NAME" maxlength="20" value="MIXTAPE VIBES" />
+        <label class="std-label" style="margin-top:10px;">MAX PLAYERS: <span id="hq-create-max-val">8</span></label>
+        <input type="range" id="hq-create-max" min="2" max="8" value="8" class="std-slider" />
+        <button id="hq-create-go" class="big-btn">CREATE & ENTER</button>
+        <button id="hq-create-cancel" class="small-btn">CANCEL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ HQ ROOM (chat space) ============ -->
+  <div id="hq-room" class="screen hidden">
+    <canvas id="hq-canvas" width="800" height="500"></canvas>
+    <div id="hq-room-hud">
+      <div id="hq-room-name">LOBBY</div>
+      <div id="hq-room-players">3/8</div>
+    </div>
+    <button id="hq-leave-btn" class="corner-btn" style="top:14px;right:14px;">✕</button>
+    <button id="hq-emote-btn" class="corner-btn" style="top:14px;left:14px;font-size:18px;">😀</button>
+
+    <!-- Emote wheel -->
+    <div id="hq-emote-wheel" class="hidden">
+      <button class="hq-emote-pick" data-emote="👋">👋</button>
+      <button class="hq-emote-pick" data-emote="🕺">🕺</button>
+      <button class="hq-emote-pick" data-emote="💪">💪</button>
+      <button class="hq-emote-pick" data-emote="👉">👉</button>
+      <button class="hq-emote-pick" data-emote="👑">👑</button>
+      <button class="hq-emote-pick" data-emote="😡">😡</button>
+      <button class="hq-emote-pick" data-emote="❤️">❤️</button>
+      <button class="hq-emote-pick" data-emote="🔥">🔥</button>
+    </div>
+
+    <!-- Chat overlay -->
+    <div id="hq-chat">
+      <div id="hq-chat-log"></div>
+      <div id="hq-chat-input-row">
+        <input id="hq-chat-input" type="text" placeholder="say something..." maxlength="80" />
+        <button id="hq-chat-send">SEND</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ CUSTOMIZE SCREEN (guest character editor) ============ -->
+  <div id="customize-screen" class="screen hidden">
+    <div class="fu-topbar">
+      <button class="fameup-home-btn" id="cust-back">⌂ FAMEUP</button>
+      <div class="fu-logo" style="font-size:18px;">MY <span class="fu-io">LOOK</span></div>
+      <div style="width:90px;"></div>
+    </div>
+
+    <div class="cust-layout">
+      <canvas id="cust-preview" width="160" height="220" style="image-rendering:pixelated;background:#000;border:3px solid #ff0033;border-radius:8px;box-shadow:0 0 18px rgba(255,0,51,0.4);"></canvas>
+      <div class="cust-controls">
+        <div class="std-label">QUICK PRESETS</div>
+        <div class="cust-preset-row">
+          <button class="cust-preset-btn" data-preset="schizo">SCHIZO</button>
+          <button class="cust-preset-btn" data-preset="xx7">XX7</button>
+          <button class="cust-preset-btn" data-preset="drip">DRIP</button>
+          <button class="cust-preset-btn" data-preset="streetwear">STREET</button>
+          <button class="cust-preset-btn" data-preset="rage">RAGE</button>
+          <button class="cust-preset-btn" data-preset="clean">CLEAN</button>
+          <button class="cust-preset-btn" data-preset="ghost">GHOST</button>
+        </div>
+
+        <div class="std-label" style="margin-top:14px;">TEST EMOTES</div>
+        <div class="cust-emote-row">
+          <button class="cust-emote-btn" data-emote="👋">👋</button>
+          <button class="cust-emote-btn" data-emote="🕺">🕺</button>
+          <button class="cust-emote-btn" data-emote="💪">💪</button>
+          <button class="cust-emote-btn" data-emote="👉">👉</button>
+          <button class="cust-emote-btn" data-emote="👑">👑</button>
+          <button class="cust-emote-btn" data-emote="😡">😡</button>
+        </div>
+
+        <p style="color:#888;font-family:'Press Start 2P',monospace;font-size:8px;letter-spacing:1px;margin-top:14px;text-align:center;line-height:1.6;">FULL CUSTOMIZER LIVES INSIDE CRABCAGE FOR NOW — TAP BELOW TO EDIT EVERY DETAIL</p>
+        <button id="cust-deep-edit" class="big-btn" style="background:#ff0033;border-color:#fff;">DEEP EDIT IN CRABCAGE →</button>
+      </div>
+    </div>
+  </div>
+  <div id="vault-screen" class="screen hidden">
+    <div class="fu-topbar">
+      <button class="fu-back-btn" id="inv-back-btn">← HOME</button>
+      <div class="fu-logo" style="font-size:18px;">MY <span class="fu-io">VAULT</span></div>
+      <div style="width:80px;"></div>
+    </div>
+
+    <!-- Profile header -->
+    <div class="inv-profile">
+      <canvas id="inv-char-preview" width="80" height="110" style="image-rendering:pixelated;background:#000;border:2px solid #ff0033;border-radius:6px;"></canvas>
+      <div class="inv-profile-info">
+        <div class="inv-profile-name" id="inv-profile-name">GUEST</div>
+        <div class="inv-profile-stats" id="inv-profile-stats">no matches played yet</div>
+        <button class="fu-back-btn" id="inv-edit-char-btn" style="margin-top:6px;">EDIT CHARACTER →</button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="inv-tabs">
+      <button class="inv-tab active" data-inv-tab="weapons">WEAPONS</button>
+      <button class="inv-tab" data-inv-tab="collectibles">COLLECTIBLES</button>
+      <button class="inv-tab" data-inv-tab="emotes">EMOTES</button>
+      <button class="inv-tab" data-inv-tab="stats">STATS</button>
+    </div>
+
+    <div class="inv-content">
+      <div class="inv-pane" id="inv-pane-weapons"></div>
+      <div class="inv-pane hidden" id="inv-pane-collectibles"></div>
+      <div class="inv-pane hidden" id="inv-pane-emotes"></div>
+      <div class="inv-pane hidden" id="inv-pane-stats"></div>
+    </div>
+  </div>
+
+  <!-- ============ SETTINGS MODAL ============ -->
+  <div id="settings-overlay" class="overlay hidden">
+    <div class="overlay-content" style="min-width:280px;max-width:380px;">
+      <h2>SETTINGS</h2>
+      <p class="signin-sub">global app preferences</p>
+      <div class="settings-row">
+        <label>MUSIC VOLUME</label>
+        <input type="range" id="set-music-vol" min="0" max="100" value="65" class="std-slider" />
+      </div>
+      <div class="settings-row">
+        <label>SFX VOLUME</label>
+        <input type="range" id="set-sfx-vol" min="0" max="100" value="100" class="std-slider" />
+      </div>
+      <div class="settings-row settings-toggle-row">
+        <label>HAPTICS</label>
+        <button id="set-haptics" class="settings-toggle on">ON</button>
+      </div>
+      <div class="settings-row settings-toggle-row">
+        <label>UI CLICK SOUNDS</label>
+        <button id="set-clicks" class="settings-toggle on">ON</button>
+      </div>
+      <p style="color:#888;font-family:'Press Start 2P',monospace;font-size:7px;letter-spacing:1px;margin-top:14px;text-align:center;">v0.31.0 · FAMEUP.io</p>
+      <button id="settings-close" class="big-btn">DONE</button>
+    </div>
+  </div>
+
+  <!-- ============ SIGN-IN MODAL ============ -->
+  <div id="signin-overlay" class="overlay hidden">
+    <div class="overlay-content signin-content">
+      <h2>SIGN IN TO <span style="color:#ff0033;">FAMEUP</span></h2>
+      <p class="signin-sub">save your character + stats across devices</p>
+
+      <input type="email" id="signin-email" class="signin-input" placeholder="EMAIL" />
+      <input type="password" id="signin-password" class="signin-input" placeholder="PASSWORD" />
+      <button id="signin-go" class="big-btn">SIGN IN / SIGN UP</button>
+
+      <div class="signin-divider"><span>OR</span></div>
+
+      <button id="signin-magic" class="big-btn signin-magic">✨ MAGIC LINK</button>
+      <button id="signin-guest" class="small-btn">CONTINUE AS GUEST</button>
+
+      <p class="signin-existing-text hidden" id="signin-status"></p>
+      <button id="signin-clear-btn" class="small-btn hidden" style="color:#ff6677;">SIGN OUT</button>
+    </div>
+  </div>
+
+  <!-- ============ START SCREEN ============ -->
+  <div id="start-screen" class="screen hidden">
+    <button id="menu-mute-btn" title="Toggle audio">🔊</button>
+    <button id="crabcage-home-btn" class="fameup-home-btn">⌂ FAMEUP</button>
+    <div id="high-score-display">HIGH 0 · $0</div>
+    <h1 class="title">
+      <span class="title-main">CRABCAGE</span>
+      <span class="title-2x">2X</span>
+    </h1>
+    <p class="ep-tag">// 2X //</p>
+    <p class="tagline">// protect the escalade. survive the swarm. //</p>
+
+    <div class="char-preview">
+      <canvas id="char-canvas" width="120" height="160"></canvas>
+    </div>
+
+    <div class="customizer">
+      <div class="cust-row preset-row">
+        <label>PRESET</label>
+        <div class="swatches" id="preset-swatches">
+          <button class="preset-btn" data-preset="schizo">SCHIZO</button>
+          <button class="preset-btn" data-preset="xx7">XX7</button>
+          <button class="preset-btn" data-preset="drip">DRIP</button>
+          <button class="preset-btn" data-preset="streetwear">STREET</button>
+          <button class="preset-btn" data-preset="rage">RAGE</button>
+          <button class="preset-btn" data-preset="clean">CLEAN</button>
+          <button class="preset-btn" data-preset="ghost">GHOST</button>
+        </div>
+      </div>
+      <button id="customize-toggle" class="cust-toggle">+ CUSTOMIZE LOOK</button>
+      <div id="customize-advanced" class="cust-advanced hidden">
+      <div class="cust-row">
+        <label>FIT</label>
+        <div class="swatches" id="fit-swatches">
+          <button class="swatch" data-fit="#00ff66" style="background:#00ff66"></button>
+          <button class="swatch" data-fit="#cc0022" style="background:#cc0022"></button>
+          <button class="swatch" data-fit="#ffcc00" style="background:#ffcc00"></button>
+          <button class="swatch" data-fit="#9933ff" style="background:#9933ff"></button>
+          <button class="swatch" data-fit="#00aaff" style="background:#00aaff"></button>
+          <button class="swatch" data-fit="#ff00aa" style="background:#ff00aa"></button>
+          <button class="swatch" data-fit="#ff6600" style="background:#ff6600"></button>
+          <button class="swatch" data-fit="#ffffff" style="background:#ffffff"></button>
+        </div>
+      </div>
+      <div class="cust-row">
+        <label>ACCENT</label>
+        <div class="swatches" id="accent-swatches">
+          <button class="swatch" data-accent="#cc0022" style="background:#cc0022"></button>
+          <button class="swatch" data-accent="#00ff66" style="background:#00ff66"></button>
+          <button class="swatch" data-accent="#000000" style="background:#000000"></button>
+          <button class="swatch" data-accent="#ffcc00" style="background:#ffcc00"></button>
+          <button class="swatch" data-accent="#9933ff" style="background:#9933ff"></button>
+          <button class="swatch" data-accent="#00aaff" style="background:#00aaff"></button>
+          <button class="swatch" data-accent="#ffffff" style="background:#ffffff"></button>
+        </div>
+      </div>
+      <div class="cust-row">
+        <label>BODY</label>
+        <div class="swatches" id="body-swatches">
+          <button class="hat-btn" data-body="male">DUDE</button>
+          <button class="hat-btn" data-body="female">GIRL</button>
+          <button class="hat-btn" data-body="they">THEY/THEM</button>
+        </div>
+      </div>
+      <div class="cust-row">
+        <label>SKIN</label>
+        <div class="swatches" id="skin-swatches">
+          <button class="skin-swatch" data-skintone="light"    style="background:#f4d3b3" title="Light"></button>
+          <button class="skin-swatch" data-skintone="medium"   style="background:#b08560" title="Medium"></button>
+          <button class="skin-swatch" data-skintone="tan"      style="background:#9a7050" title="Tan"></button>
+          <button class="skin-swatch" data-skintone="brown"    style="background:#7a5236" title="Brown"></button>
+          <button class="skin-swatch" data-skintone="dark"     style="background:#553520" title="Dark"></button>
+          <button class="skin-swatch" data-skintone="verydark" style="background:#3a2010" title="Very Dark"></button>
+        </div>
+      </div>
+      <div class="cust-row">
+        <label>SHIRT</label>
+        <div class="swatches" id="shirt-swatches">
+          <button class="hat-btn" data-shirtless="true">OFF</button>
+          <button class="hat-btn" data-shirtless="false">ON</button>
+        </div>
+      </div>
+      <div class="cust-row">
+        <label>TATS</label>
+        <div class="swatches" id="tat-swatches">
+          <button class="hat-btn" data-tattoos="true">YEAH</button>
+          <button class="hat-btn" data-tattoos="false">NAH</button>
+        </div>
+      </div>
+      <div class="cust-row">
+        <label>HEAD</label>
+        <div class="swatches" id="hat-swatches">
+          <button class="hat-btn" data-hat="durag">DURAG</button>
+          <button class="hat-btn" data-hat="cap">CAP</button>
+          <button class="hat-btn" data-hat="hood">HOOD</button>
+          <button class="hat-btn" data-hat="beanie">BEANIE</button>
+          <button class="hat-btn" data-hat="bandana">BANDANA</button>
+          <button class="hat-btn" data-hat="headphones">CANS</button>
+          <button class="hat-btn" data-hat="mohawk">MOHAWK</button>
+          <button class="hat-btn" data-hat="none">BALD</button>
+        </div>
+      </div>
+      <div class="cust-row">
+        <label>SHADES</label>
+        <div class="swatches" id="shades-swatches">
+          <button class="hat-btn" data-shades="false">NAH</button>
+          <button class="hat-btn" data-shades="true">YEAH</button>
+        </div>
+      </div>
+      <div class="cust-row">
+        <label>VIBE</label>
+        <div class="swatches" id="pattern-swatches">
+          <button class="hat-btn" data-pattern="solid">SOLID</button>
+          <button class="hat-btn" data-pattern="stripe">STRIPE</button>
+          <button class="hat-btn" data-pattern="flame">FLAME</button>
+          <button class="hat-btn" data-pattern="glow">GLOW</button>
+        </div>
+      </div>
+      <div class="cust-row">
+        <label>CHAINS</label>
+        <div class="swatches" id="chain-swatches">
+          <button class="hat-btn" data-chain="gold">GOLD</button>
+          <button class="hat-btn" data-chain="ice">ICE</button>
+          <button class="hat-btn" data-chain="cuban">CUBAN</button>
+          <button class="hat-btn" data-chain="platinum">PLAT</button>
+          <button class="hat-btn" data-chain="none">NONE</button>
+        </div>
+      </div>
+    </div><!-- /cust-advanced -->
+    </div><!-- /customizer -->
+
+    <button id="randomize-btn" class="small-btn">🎲 RANDOMIZE</button>
+    <div class="difficulty-row" id="difficulty-row">
+      <button class="diff-btn" data-diff="easy">EASY</button>
+      <button class="diff-btn selected" data-diff="normal">NORMAL</button>
+      <button class="diff-btn" data-diff="hard">HARD</button>
+    </div>
+    <button id="start-btn" class="big-btn">START GAME</button>
+    <div class="coop-row" style="display:flex;gap:8px;justify-content:center;margin-top:10px;">
+      <button id="coop-host-btn" class="small-btn coop-btn">👥 COOP HOST</button>
+      <button id="coop-join-btn" class="small-btn coop-btn">👥 COOP JOIN</button>
+    </div>
+    <div class="menu-secondary">
+      <button id="shop-btn" class="small-btn">💰 SHOP</button>
+      <button id="scores-btn" class="small-btn">🏆 SCORES</button>
+      <button id="stats-btn" class="small-btn">📊 STATS</button>
+      <button id="howto-btn" class="small-btn">HOW TO PLAY</button>
+    </div>
+    <div class="ep-cta-row">
+      <a id="ep-spotify-link" href="#" target="_blank" rel="noopener" class="ep-cta spotify">🎧 STREAM ON SPOTIFY</a>
+      <a id="ep-apple-link" href="#" target="_blank" rel="noopener" class="ep-cta apple">🍎 APPLE MUSIC</a>
+    </div>
+  </div>
+
+  <!-- ============ COOP LOBBY ============ -->
+  <div id="coop-lobby-overlay" class="screen hidden" style="background:rgba(0,0,0,0.97);">
+    <div class="overlay-content" style="max-width:520px;">
+      <h2 id="coop-title" style="margin-bottom:8px;">COOP</h2>
+      <p style="color:#888;font-size:9px;letter-spacing:2px;text-align:center;margin-bottom:14px;">UP TO 4 PLAYERS</p>
+
+      <div id="coop-host-view" class="hidden" style="text-align:center;">
+        <p style="color:#888;font-size:11px;letter-spacing:2px;">SHARE THIS CODE</p>
+        <div id="coop-code-display" style="font-size:56px;letter-spacing:14px;color:#ff0033;text-shadow:0 0 24px rgba(255,0,51,0.6);margin:14px 0;">----</div>
+      </div>
+
+      <div id="coop-join-view" class="hidden" style="text-align:center;">
+        <p style="color:#888;font-size:11px;letter-spacing:2px;">ENTER ROOM CODE</p>
+        <input id="coop-code-input" type="text" maxlength="4" placeholder="ABCD" style="font-size:36px;text-align:center;letter-spacing:10px;background:#000;border:2px solid #ff0033;color:#ff0033;width:200px;padding:10px;margin:14px 0;text-transform:uppercase;font-family:'Press Start 2P',monospace;" />
+        <div>
+          <button id="coop-join-go" class="big-btn">JOIN GAME</button>
+        </div>
+      </div>
+
+      <!-- LOBBY LIST — shows once connected, both host + guests see this -->
+      <div id="coop-lobby-list" class="hidden">
+        <p style="color:#00ff66;font-size:11px;text-align:center;margin-bottom:12px;">CONNECTED — PICK YOUR LOOK + DIFFICULTY, THEN READY UP</p>
+        <div id="coop-slots-container"></div>
+        <div style="display:flex;justify-content:center;margin:14px 0;">
+          <canvas id="coop-char-preview" width="120" height="160" style="background:#000;border:2px solid #ff0033;border-radius:6px;"></canvas>
+        </div>
+        <div style="text-align:center;margin-top:8px;">
+          <p style="color:#888;font-size:10px;">YOUR PICKS — applied to your character</p>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin:8px 0;">
+            <button class="preset-btn coop-preset" data-preset="schizo">SCHIZO</button>
+            <button class="preset-btn coop-preset" data-preset="xx7">XX7</button>
+            <button class="preset-btn coop-preset" data-preset="drip">DRIP</button>
+            <button class="preset-btn coop-preset" data-preset="streetwear">STREET</button>
+            <button class="preset-btn coop-preset" data-preset="rage">RAGE</button>
+            <button class="preset-btn coop-preset" data-preset="clean">CLEAN</button>
+            <button class="preset-btn coop-preset" data-preset="ghost">GHOST</button>
+          </div>
+          <div id="coop-diff-section">
+            <p style="color:#888;font-size:9px;letter-spacing:2px;margin-bottom:4px;">DIFFICULTY (HOST DECIDES FOR EVERYONE)</p>
+            <div style="display:flex;gap:6px;justify-content:center;margin:8px 0;">
+              <button class="diff-btn coop-diff" data-diff="easy">EASY</button>
+              <button class="diff-btn coop-diff" data-diff="normal">NORMAL</button>
+              <button class="diff-btn coop-diff" data-diff="hard">HARD</button>
+            </div>
+            <p id="coop-diff-current" style="color:#ffcc00;font-size:10px;margin-top:0;">CURRENT: NORMAL</p>
+          </div>
+          <button id="coop-ready-btn" class="big-btn" style="margin-top:10px;">READY UP</button>
+          <p id="coop-ready-status" style="color:#ffcc00;font-size:10px;margin-top:10px;"></p>
+        </div>
+      </div>
+
+      <button id="coop-back-btn" class="small-btn" style="margin-top:20px;">CANCEL</button>
+    </div>
+  </div>
+
+  <!-- ============ INVENTORY ============ -->
+  <div id="inventory-screen" class="screen hidden">
+    <h2>🎒 INVENTORY</h2>
+    <p class="inv-help">tap to equip / unequip — fists always equipped</p>
+    <div class="inv-list" id="inv-list"></div>
+    <button id="inv-back" class="big-btn">BACK</button>
+  </div>
+
+  <!-- ============ STATS ============ -->
+  <div id="stats-screen" class="screen hidden">
+    <h2>LIFETIME STATS</h2>
+    <div class="scores-content" id="stats-list"></div>
+    <button id="stats-back" class="big-btn">BACK</button>
+  </div>
+
+  <!-- ============ SHOP ============ -->
+  <div id="shop-screen" class="screen hidden">
+    <h2>SHOP <span class="shop-bank" id="shop-cash">$0</span></h2>
+    <div class="shop-tabs">
+      <button class="shop-tab active" data-cat="all">ALL</button>
+      <button class="shop-tab" data-cat="upgrade">UPGRADES</button>
+      <button class="shop-tab" data-cat="unlock">WEAPONS</button>
+      <button class="shop-tab" data-cat="power">POWERS</button>
+    </div>
+    <div class="shop-content" id="shop-items"></div>
+    <button id="shop-back" class="big-btn">BACK</button>
+  </div>
+
+  <!-- ============ SCORES ============ -->
+  <div id="scores-screen" class="screen hidden">
+    <h2>TOP 5</h2>
+    <div class="scores-content" id="scores-list"></div>
+    <button id="scores-back" class="big-btn">BACK</button>
+  </div>
+
+  <!-- ============ HOW TO PLAY ============ -->
+  <div id="howto-screen" class="screen hidden">
+    <h2>HOW TO PLAY</h2>
+    <div class="howto-content">
+      <p><strong>GOAL:</strong> Keep the black Escalade alive. Survive 15 waves. Beat 3 bosses to reach the finale at wave 30.</p>
+      <p><strong>DESKTOP:</strong> WASD or arrows to move. Mouse aims & left-click shoots. <strong>HOLD SPACE to auto-aim AND auto-fire.</strong> R reloads. SHIFT to dash. TAB to pause. Q activates stored power-up. 1-5 selects a power slot. E to emote.</p>
+      <p><strong>iPHONE:</strong> Drag left half to move (joystick follows your thumb). FIRE button auto-aims & fires. DASH for slo-mo i-frames. Tap pause for inventory, shop, playlist.</p>
+      <p><strong>WEAPONS (4 tiers):</strong> grey (Draco/Glock/Fists/RPG), green (Sawed-off, Stun, Crab Laser), gold (★ Gold Draco, ★ Gold RPG, ★ Plasma), red epic (⚡ Tesla = chain lightning, 🔥 Flamethrower = burn DOT).</p>
+      <p><strong>POWERS (Q to fire):</strong> Shockwave, Nuke, Medpack, Time Warp. Buy at shop, store up to 5. Pick slot with 1-5 keys.</p>
+      <p><strong>CASH:</strong> Drops from kills. Magnets to you. Carries between runs in your BANK. Shop unlocks reset on death — cash and high score stay.</p>
+      <p><strong>WATCH OUT:</strong> Fans run for pics — shooting them locks your gun for 5 sec. Bosses dodge knockback to finish their moves.</p>
+      <p><strong>BOSSES:</strong> Wave 5 = Giant Crab. Wave 10 = 2Slimey (charges if you camp far). Wave 15 = Mirror 2X. Then after-party at the CD pickup. Wave 30 = finale rematch.</p>
+    </div>
+    <button id="howto-back" class="big-btn">BACK</button>
+  </div>
+
+  <!-- ============ GAME SCREEN ============ -->
+  <div id="game-screen" class="screen hidden">
+    <canvas id="game-canvas"></canvas>
+
+    <div id="hud">
+      <div id="coop-hud" class="coop-hud" style="display:none;">
+        <div class="coop-hud-slot" data-slot="0" style="border-color:#ff0033;">P1</div>
+        <div class="coop-hud-slot" data-slot="1" style="border-color:#00aaff;">P2</div>
+        <div class="coop-hud-slot" data-slot="2" style="border-color:#ffcc00;">P3</div>
+        <div class="coop-hud-slot" data-slot="3" style="border-color:#00ff66;">P4</div>
+      </div>
+      <div class="hud-row" id="player-hp-row">
+        <div class="hud-bar">
+          <span class="hud-label">2X</span>
+          <div class="bar"><div id="player-hp-fill" class="bar-fill hp"></div></div>
+        </div>
+      </div>
+      <div class="hud-row" id="truck-hp-row">
+        <div class="hud-bar">
+          <span class="hud-label">TRUCK</span>
+          <div class="bar"><div id="truck-hp-fill" class="bar-fill truck"></div></div>
+        </div>
+      </div>
+      <div class="hud-row">
+        <div class="hud-stat" id="hud-wave">WAVE 1</div>
+        <div class="hud-stat" id="hud-score">0</div>
+        <div class="hud-stat hud-cash" id="hud-cash">$0</div>
+        <div class="hud-stat" id="hud-ammo">AMMO --</div>
+        <div class="hud-stat hud-companions" id="hud-companions" style="display:none;"></div>
+        <div class="hud-stat hud-powers" id="hud-powers" style="display:none;"></div>
+        <div class="hud-stat hud-left" id="hud-left" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div id="boss-hp-container" class="hidden">
+      <div id="boss-hp-name">BOSS</div>
+      <div class="boss-hp-bar"><div id="boss-hp-fill" class="boss-hp-fill"></div></div>
+    </div>
+
+    <div id="weapon-bar">
+      <button class="weapon-slot" data-weapon="0">DRACO</button>
+      <button class="weapon-slot" data-weapon="1">GLOCK</button>
+      <button class="weapon-slot" data-weapon="2">FISTS</button>
+      <button class="weapon-slot" data-weapon="3">RPG</button>
+      <button class="weapon-slot locked" data-weapon="4">CRAB</button>
+      <button class="weapon-slot" data-weapon="5" style="display:none;">SAWED</button>
+      <button class="weapon-slot" data-weapon="6" style="display:none;">STUN</button>
+      <button class="weapon-slot legendary" data-weapon="7" style="display:none;">★GOLD DRACO</button>
+      <button class="weapon-slot legendary" data-weapon="8" style="display:none;">★GOLD RPG</button>
+      <button class="weapon-slot legendary" data-weapon="9" style="display:none;">★PLASMA</button>
+      <button class="weapon-slot epic" data-weapon="10" style="display:none;">⚡TESLA</button>
+      <button class="weapon-slot epic" data-weapon="11" style="display:none;">🔥FLAME</button>
+      <button class="weapon-slot epic" data-weapon="12" style="display:none;">❄️FREEZE</button>
+      <button class="weapon-slot legendary" data-weapon="13" style="display:none;">🍯HONEY</button>
+    </div>
+
+    <div id="touch-controls">
+      <div id="joystick">
+        <div id="joystick-stick"></div>
+      </div>
+      <div id="touch-actions">
+        <button id="power-btn" class="touch-btn small">Q</button>
+        <button id="dash-btn" class="touch-btn">DASH</button>
+        <button id="fire-btn" class="touch-btn fire">FIRE</button>
+      </div>
+    </div>
+
+    <button id="pause-btn" class="corner-btn">II</button>
+  </div>
+
+  <!-- ============ PAUSE OVERLAY ============ -->
+  <div id="pause-overlay" class="overlay hidden">
+    <div class="overlay-content pause-panel">
+      <h2>PAUSED</h2>
+      <p id="pause-stats" class="pause-stats">--</p>
+      <div id="pause-inventory" class="pause-inventory"></div>
+      <div class="volume-row">
+        <label>VOL</label>
+        <input type="range" id="volume-slider" min="0" max="100" value="45" />
+      </div>
+      <button id="resume-btn" class="big-btn">RESUME</button>
+      <button id="pause-shop-btn" class="big-btn shop-btn-gold">💰 SHOP</button>
+      <button id="pause-inv-btn" class="big-btn">🎒 INVENTORY</button>
+      <button id="restart-btn" class="big-btn">RESTART</button>
+      <button id="quit-btn" class="small-btn">QUIT TO MENU</button>
+      <!-- AUDIO PLAYER — playlist with skip/play/pause -->
+      <div id="audio-player">
+        <div class="player-art" id="player-art">🎵</div>
+        <div class="player-info">
+          <div class="player-track-name" id="player-track-name">CRABCAGE</div>
+          <div class="player-track-artist" id="player-track-artist">2X · gameplay</div>
+        </div>
+        <div class="player-controls">
+          <button id="player-prev" class="player-btn" aria-label="Previous">⏮</button>
+          <button id="player-play" class="player-btn player-play" aria-label="Play/Pause">⏸</button>
+          <button id="player-next" class="player-btn" aria-label="Next">⏭</button>
+        </div>
+      </div>
+      <div class="audio-toggle">
+        <label><input type="checkbox" id="music-toggle" checked /> MUSIC</label>
+        <label><input type="checkbox" id="sfx-toggle" checked /> SFX</label>
+        <label><input type="checkbox" id="haptics-toggle" checked /> HAPTICS</label>
+        <label><input type="checkbox" id="motion-toggle" checked /> SCREEN SHAKE</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ GAME OVER ============ -->
+  <div id="gameover-overlay" class="overlay hidden">
+    <div class="overlay-content">
+      <h2 id="gameover-title">GAME OVER</h2>
+      <p id="gameover-stats"></p>
+      <button id="retry-btn" class="big-btn">RETRY</button>
+      <button id="coop-revive-btn" class="big-btn" style="background:#00ff66;color:#000;display:none;">💵 REVIVE ($4200)</button>
+      <div class="press-r-hint">PRESS R OR ENTER TO RETRY</div>
+      <button id="menu-btn" class="small-btn">MAIN MENU</button>
+      <div class="ep-cta-row" style="margin-top:14px;">
+        <a id="ep-spotify-link-go" href="#" target="_blank" rel="noopener" class="ep-cta spotify">🎧 SPOTIFY</a>
+        <a id="ep-apple-link-go" href="#" target="_blank" rel="noopener" class="ep-cta apple">🍎 APPLE</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ WAVE BANNER ============ -->
+  <div id="wave-banner" class="banner hidden">
+    <h2 id="banner-text">WAVE 1</h2>
+  </div>
+
+  <!-- ============ BOSS CUTSCENE ============ -->
+  <div id="boss-cutscene" class="hidden">
+    <canvas id="boss-cutscene-portrait" width="180" height="220"></canvas>
+    <div class="boss-cutscene-text">
+      <h2 id="boss-cutscene-name">BOSS NAME</h2>
+      <p id="boss-cutscene-line">— ENTERS THE FIGHT —</p>
+      <p id="boss-cutscene-tag" style="color:#ffcc00;font-size:9px;letter-spacing:2px;margin-top:6px;"></p>
+    </div>
+    <button id="boss-cutscene-skip">TAP TO SKIP</button>
+  </div>
+
+  <!-- ============ SPECTATOR / DOWNED OVERLAY (coop only) ============ -->
+  <div id="spectator-overlay" class="hidden">
+    <div class="spec-banner">
+      <span class="spec-blink">●</span> YOU'RE DOWN — SPECTATING
+    </div>
+    <div class="spec-revive">
+      <button id="spec-revive-btn" class="spec-revive-btn">💵 REVIVE — $4200</button>
+      <div id="spec-revive-info" class="spec-info">YOUR BANK: $0</div>
+    </div>
+  </div>
+
+  <!-- Audio tracks -->
+  <audio id="music-menu"     src="music/menu.mp3"    loop preload="auto"></audio>
+  <audio id="music-gameplay" src="music/gameplay.mp3" loop preload="auto"></audio>
+  <audio id="music-boss"     src="music/boss.mp3"    loop preload="auto"></audio>
+  <audio id="music-party"    src="music/partysong.mp3" loop preload="metadata"></audio>
+  <audio id="music-fameup"   src="music/fameuptheme.mp3" loop preload="auto"></audio>
+
+  <!-- Game scripts (order matters) -->
+  <script src="js/audio.js?v=0.31.0"></script>
+  <script src="js/sprites.js?v=0.31.0"></script>
+  <script src="js/input.js?v=0.31.0"></script>
+  <script src="js/weapons.js?v=0.31.0"></script>
+  <script src="js/entities.js?v=0.31.0"></script>
+  <script src="js/waves.js?v=0.31.0"></script>
+  <script src="js/coop.js?v=0.31.0"></script>
+  <script src="js/game.js?v=0.31.0"></script>
+  <script src="js/standoff.js?v=0.31.0"></script>
+  <script src="js/hq.js?v=0.31.0"></script>
+  <script src="js/fameup_customize.js?v=0.31.0"></script>
+  <script src="js/fameup.js?v=0.31.0"></script>
+
+  <script>
+    // One-time bulletproof migration: if user hasn't seen this version yet,
+    // force-unregister any stale SW + reload. This guarantees fresh code on iPhone
+    // regardless of how aggressively the old SW was caching.
+    (function migrationCheck() {
+      const VERSION = 'v0.31.0';
+      const SEEN_KEY = 'fameup_seen_' + VERSION;
+      if (localStorage.getItem(SEEN_KEY)) return; // already migrated this version
+      if (!('serviceWorker' in navigator)) { localStorage.setItem(SEEN_KEY, '1'); return; }
+      // Mark seen FIRST so we don't loop on reload
+      localStorage.setItem(SEEN_KEY, '1');
+      navigator.serviceWorker.getRegistrations().then(rs => {
+        if (rs.length === 0) return;
+        // Unregister all + clear all caches
+        Promise.all([
+          ...rs.map(r => r.unregister()),
+          'caches' in self ? caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))) : Promise.resolve(),
+        ]).then(() => {
+          // Hard reload — bypasses every cache layer
+          window.location.reload();
+        });
+      }).catch(() => {});
+    })();
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js?v=0.31.0').then(reg => {
+          // Check for updates every page load
+          reg.update().catch(() => {});
+          // Auto-reload when a new SW takes control (new code deployed)
+          let reloaded = false;
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (reloaded) return;
+            reloaded = true;
+            window.location.reload();
+          });
+          // Detect a waiting worker (means update is ready) and activate immediately
+          if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          reg.addEventListener('updatefound', () => {
+            const nw = reg.installing;
+            if (!nw) return;
+            nw.addEventListener('statechange', () => {
+              if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+                nw.postMessage({ type: 'SKIP_WAITING' });
+              }
+            });
+          });
+        }).catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
